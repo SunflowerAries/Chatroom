@@ -11,8 +11,8 @@ class MessageType(enum.IntEnum):
     
 def convert(parameters):
     header = {}
-    header['Type'] = 
-    header['Date'] = parameters
-    header['Length'] = 
-    header[]
+    header['Type'] = parameters[0]
+    header['Date'] = parameters[1].decode()
+    header['Length'] = parameters[2]
+    print(header)
     return header

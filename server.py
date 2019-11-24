@@ -7,23 +7,27 @@ from message import *
 
 MAX_ONLINE = 5
 
-# class ChatServer(threading.Thread):
-#     def __init__(self, conn, addr):
-#         super(ChatServer, self).__init__()
-#         self.conn = conn
-#         self.addr = addr
+users = {}
+
+class ChatServer(threading.Thread):
+    def __init__(self, conn, addr):
+        super(ChatServer, self).__init__()
+        self.conn = conn
+        self.addr = addr
+        self.bytes_to_receive = 0
+        self.bytes_received = 0
     
-#     def run(self):
-#         while True:
-#             try:
-#                 ready_to_read, ready_to_write, in_error = select.select([self.conn], [], [])
-#                 header = 
-#             except:
+    def run(self):
+        while True:
+            try:
+                ready_to_read, ready_to_write, in_error = select.select([self.conn], [], [])
+                header = 
+            except:
 
 def main(max_online):
     port = 12345
     socket_list = []
-    users = {}
+    
     bytes_to_receive = {}
     bytes_received = {}
     data_buffer = {}
@@ -47,6 +51,7 @@ def main(max_online):
                 socket_list.append(connect)
                 bytes_received[connect] = 0
                 bytes_to_receive[connect] = 0
+                data_buffer[connect] = bytes()
                 reply = "You are connected from: " + str(addr)
                 connect.send(reply.encode())
                 continue
@@ -65,19 +70,23 @@ def main(max_online):
                 if not conn_state:
                     sock.close()
                 else:
+                    print('before unpack')
                     parameters = struct.unpack('!I24sI', header)
+                    print(parameters)
                     header = convert(parameters)
                     bytes_to_receive[sock] = header['Length']
 
             buffer = sock.recv(bytes_to_receive[sock] - bytes_received[sock])
+            print(buffer, data_buffer[sock])
             data_buffer[sock] += buffer
+            print(data_buffer[sock])
             bytes_received[sock] += len(buffer)
             
             if bytes_received[sock] == bytes_to_receive[sock] and bytes_received[sock] != 0:
                 bytes_received[sock] = 0
                 bytes_to_receive[sock] = 0
                 try:
-                    handler(sock, itype, parameters)
+                    handler(sock, header['Type'], header)
                 except:
                     pprint(sys.exc_info())
                     traceback.print_exc(file=sys.stdout)

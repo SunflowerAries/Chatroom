@@ -20,8 +20,8 @@ def main(dst, port):
 
     bytes_to_receive = 0
     bytes_received = 0
-    data_buffer = ''
-
+    data_buffer = bytes()
+    # print('in main ok')
     # recv_msg = client_socket.recv(1024)
     # print(recv_msg)
     # send_msg = input("Enter your user name(prefix with #):")
@@ -29,8 +29,10 @@ def main(dst, port):
 
     while True:
         ready_to_read, ready_to_write, in_error = select.select([client_socket], [], [])
+
         if bytes_to_receive == 0 and bytes_received == 0:
             conn_state = True
+            print('receive server')
             header = ''
             try:
                 header = client_socket.recv(32)
@@ -41,25 +43,33 @@ def main(dst, port):
             if not conn_state:
                 print('服务器已关闭')
             else:
-                parameters = struct.unpack('!I24sI', header)
-                header = convert(parameters)
-                bytes_to_receive = header['Length']
+                print(header)
+                tmp = header.decode()
+                print(tmp, tmp.startswith("Y"))
+                if not tmp.startswith("Y"):
+                    print('in unpack')
+                    parameters = struct.unpack('!I24sI', header)
+                    header = convert(parameters)
+                    bytes_to_receive = header['Length']
         buffer = client_socket.recv(bytes_to_receive - bytes_received)
+        print('before data_buffer', buffer)
         data_buffer += buffer
+        print('after data_buffer')
         bytes_received += len(buffer)
+        print('before send')
         if bytes_received == bytes_to_receive:
             bytes_to_receive = 0
             bytes_received = 0
-
+            print('in send')
             try:
-                if header['Type'] == MessageType.send_message:
-                    print(data_buffer)
-                    message = input()
-                    date = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())
-                    length = len(message)
-                    itype = MessageType.send_message
-                    header = struct.pack('!I24sI', itype, date, length)
-                    client_socket.send(header, message)
+                # if header['Type'] == MessageType.send_message:
+                #     print(data_buffer)
+                message = input('input:').encode()
+                date = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime()).encode()
+                length = len(message)
+                itype = MessageType.send_message
+                header = struct.pack('!I24sI', itype, date, length)
+                client_socket.send(header + message)
             except:
                 pprint(sys.exc_info())
                 traceback.print_exc(file=sys.stdout)
@@ -75,15 +85,16 @@ def main(dst, port):
     client_socket.close()
 
 if __name__ == '__main__':
-    dst = 0
-    port = 0
     try:
         dst = int(sys.args[1])
-        port = int(sys.argv[2])
     except:
         dst = '127.0.0.1'
+    try:
+        port = int(sys.argv[2])
+    except:
         port = 12345
     try:
+        print("in main")
         main(dst, port)
     except:
         print("Client terminated.")

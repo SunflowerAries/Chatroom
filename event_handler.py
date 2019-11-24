@@ -1,4 +1,29 @@
-import message
+from message import *
+
+def login(sock, parameters):
+    print('in login')
+
+def register(sock, parameters):
+    print('in register')
+
+def add_friend(sock, parameters):
+    print('in add_friend')
+
+def resolve_friend_request(sock, parameters):
+    print('in resolve_friend_request')
+
+def send_message(sock, parameters):
+    print('in send_message')
+
+def join_room(sock, parameters):
+    print('in join_room')
+
+def create_room(sock, parameters):
+    print('in create_room')
+
+def query_room_users(sock, parameters):
+    print('in query_room_users')
+
 event_hander_map = {
     MessageType.login: login,
     MessageType.register: register,
@@ -11,4 +36,5 @@ event_hander_map = {
 }
 
 def handler(sock, itype, parameters):
-    event_hander_map[itype].run(sock, parameters)
+    print('in handler')
+    event_hander_map[itype](sock, parameters)
