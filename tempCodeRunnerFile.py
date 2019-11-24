@@ -1,1 +1,0 @@
-time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())

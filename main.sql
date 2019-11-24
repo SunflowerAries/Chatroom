@@ -49,11 +49,11 @@ PRIMARY KEY ("id")
 -- ----------------------------
 -- Table structure for users
 -- ----------------------------
-DROP TABLE IF EXISTS "main"."users";
-CREATE TABLE "users" (
-"id"  INTEGER NOT NULL,
-"username"  TEXT,
-"password"  TEXT,
-"nickname"  TEXT,
-PRIMARY KEY ("id" ASC)
+DROP TABLE IF EXISTS "main"."Users";
+CREATE TABLE "Users" (
+"ID"  INTEGER NOT NULL,
+"Username"  TEXT,
+"Password"  TEXT,
+"Nickname"  TEXT,
+PRIMARY KEY ("ID" ASC)
 );
