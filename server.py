@@ -12,12 +12,9 @@ class ChatServer(threading.Thread):
     def __init__(self, conn):
         super(ChatServer, self).__init__()
         self.conn = conn
-        self.bytes_to_receive = 0
-        self.bytes_received = 0
-        self.data_buffer = bytes()
     
     def run(self):
-        listener(self, True)
+        listener(self)
 
 def main(max_online):
     port = 12345
@@ -35,7 +32,7 @@ def main(max_online):
                 # create_secure_channel(sock)
                 # print(sock)
                 connect, addr = server_socket.accept()
-                # print(connect)
+                print(connect)
                 # reply = "You are connected from: " + str(addr)
                 # connect.send(reply.encode())
                 server = ChatServer(connect)

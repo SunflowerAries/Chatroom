@@ -8,27 +8,19 @@ class ChatClient(threading.Thread):
     def __init__(self, conn):
         super(ChatClient, self).__init__()
         self.conn = conn
-        self.bytes_to_receive = 0
-        self.bytes_received = 0
-        self.data_buffer = bytes()
     
     def run(self):
-        listener(self, False)
+        listener(self)
 
 def startup(sock):
     choice = input('login(0), register(1):')
     username = input('username:')
     password = input('password:')
-    date = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())
     if int(choice) == 0:
-        itype = MessageType.login
-        header = struct.pack('!I', itype)
-        header += serial_pack([date, username, password, 0])
+        header = serial_header_pack(MessageType.login, [username, password])
     else:
-        itype = MessageType.register
-        header = struct.pack('!I', itype)
         nickname = input('nickname:')
-        header += serial_pack([date, username, password, nickname, 0])
+        header = serial_header_pack(MessageType.register, [username, password, nickname])
     
     # print(header)
     sock.conn.send(header)
@@ -41,8 +33,6 @@ def main(dst, port):
     client = ChatClient(client_socket)
     client.start()
     startup(client)
-
-    # client_socket.close()
 
 if __name__ == '__main__':
     try:

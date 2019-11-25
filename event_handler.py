@@ -1,19 +1,19 @@
 import socket, time
 from message import *
+from pack import *
 import database
 
 def login(sock, parameters):
+    print('in login')
     c = database.get_cursor()
-    fields = ['ID', 'Username', 'Nickname']
+    fields = ['ID', 'Username', 'Nickname', 'Password']
     # print(','.join(fields), parameters['Username'])
     # print('SELECT ' + ','.join(fields) + ',Password' + ' from Users where Username=%s' % (parameters['Username']))
-    result = c.execute('SELECT ' + ','.join(fields) + ',Password' + ' from Users where Username=?', (parameters['Username'], ))
+    result = c.execute('SELECT ' + ','.join(fields) + ' from Users where Username=?', (parameters['Username'], ))
     rows = result.fetchall()
 
     if len(rows) == 0:
-        header = struct.pack('!I', MessageType.user_not_exist)
-        date = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())
-        header += serial_pack([date, 0])
+        header = serial_header_pack(MessageType.user_not_exist)
         sock.conn.send(header)
         return
     
@@ -24,57 +24,110 @@ def login(sock, parameters):
             match = True
             cnt = i
             user = dict(zip(fields, rows[i]))
-            date = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())
             break
     
     if not match:
-        header = struct.pack('!I', MessageType.wrong_password)
-        date = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())
-        header += serial_pack([date, 0])
+        header = serial_header_pack(MessageType.wrong_password)
         sock.conn.send(header)
         return
     
     if user['ID'] in database.user_id_to_host:
         old_host = database.user_id_to_host[user['ID']]
-        header = struct.pack('!I', MessageType.other_host_login)
-        date = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())
-        header += serial_pack([date, 0])
+        header = serial_header_pack(MessageType.other_host_login)
         old_host.conn.send(header)
         old_host.close()
         database.kickout_host(old_host)
     
     database.user_id_to_host[user['ID']] = sock
-    header = struct.pack('!I', MessageType.login_successful)
+    # ID Username Nickname
     tmp = list(rows[cnt][0:3])
-    tmp.append(date)
-    tmp.append(0)
-    header += serial_pack(tmp)
+    
     # print(header)
     # print(sock.conn)
-    sock.conn.send(header)
+    
+    related = {}
+    room_list = database.get_user_room(user['ID'])
+    related['Room'] = room_list
+    # 发送好友请求
+    # TODO: serial_header_pack have to deal with [[]]
+    friend_list = database.get_pending_friend_request(user['ID'])
+    for friend in friend_list:
+        iheader = serial_header_pack(MessageType.add_friend, friend)
+        sock.conn.send(iheader)
+    
+    # 通知好友自己上线
+    friend_list = database.get_friends(user['ID'])
+    related['Friend'] = friend_list
+    for friend in friend_list:
+        if friend['ID'] in database.user_id_to_host:
+            iheader = serial_header_pack(MessageType.friend_online, [user['ID']])
+            database.user_id_to_host[friend['ID']].conn.send(iheader)
+    
+    # 通知群成员自己上线
+    for room in room_list:
+        mems_id = database.get_room_members_id(room['ID'])
+        for mem_id in mems_id:
+            if mem_id in database.user_id_to_host and mem_id != user['ID']:
+                iheader = serial_header_pack(MessageType.room_mem_online, [room['ID'], user['ID']])
+                database.user_id_to_host[mem_id].conn.send(iheader)
+    
+    # TODO: login_successful need length field
+    
+    related['Message'] = database.get_chat_history(user['ID'])
+    # print(related)
+    data = serial_data_pack([related])
+    print(data)
+    tmp.append(len(data))
+    header = serial_header_pack(MessageType.login_successful, tmp)
+    sock.conn.send(header + data)
 
 def login_successful(sock, parameters):
+    print('login_successful')
+    print(parameters)
+    data = serial_data_unpack(sock)
+    print(data)
+
+def user_not_exist(sock, parameters):
+    print('user_not_exist')
+    print(parameters)
+
+def wrong_password(sock, parameters):
+    print('wrong_password')
+    print(parameters)
+
+def other_host_login(sock, parameters):
+    print('other_host_login')
+    print(parameters)
+
+def friend_online(sock, parameters):
+    print('friend_online')
+    print(parameters)
+
+def room_mem_online(sock, parameters):
+    print('room_mem_online')
     print(parameters)
 
 def register(sock, parameters):
+    print('register')
     c = database.get_cursor()
     r = c.execute('SELECT * from Users where Username=?', [parameters['Username']])
     rows = r.fetchall()
     if len(rows) > 0:
-        header = struct.pack('!I', MessageType.username_taken)
-        date = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())
-        header += serial_pack([date, 0])
+        header = serial_header_pack(MessageType.username_taken)
         sock.conn.send(header)
         return
     c.execute('INSERT into Users (Username,Password,Nickname) values (?,?,?)',
               [parameters['Username'], parameters['Password'], parameters['Nickname']])
-    date = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())
-    header = struct.pack('!I', MessageType.register_successful)
-    header += serial_pack([c.lastrowid, date, 0])
+    header = serial_header_pack(MessageType.register_successful, [c.lastrowid])
     # print(sock)
     sock.conn.send(header)
 
 def register_successful(sock, parameters):
+    print('register_successful')
+    print(parameters)
+
+def username_taken(sock, parameters):
+    print('username_taken')
     print(parameters)
 
 def add_friend(sock, parameters):
@@ -106,8 +159,13 @@ event_hander_map = {
     MessageType.query_room_users: query_room_users,
     MessageType.login_successful: login_successful,
     MessageType.register_successful: register_successful,
+    MessageType.username_taken: username_taken,
+    MessageType.user_not_exist: user_not_exist,
+    MessageType.wrong_password: wrong_password,
+    MessageType.other_host_login: other_host_login,
+    MessageType.friend_online: friend_online,
+    MessageType.room_mem_online: room_mem_online,
 }
 
 def handler(sock, itype, parameters):
-    print('in handler')
     event_hander_map[itype](sock, parameters)
