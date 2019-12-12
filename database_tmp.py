@@ -11,10 +11,9 @@ class Db:
         self.connection.execute("CREATE TABLE IF NOT EXISTS STUDENTS(NAME TEXT, USERNAME TEXT NOT NULL,EMAIL TEXT, PASSWORD TEXT)")        
         self.connection.commit()
 
-    def insertTable(self,name,user,email,password):
+    def insertTable(self,name,user,password):
         print(name)
         print(user)
-        print(email)
         print(password)
         self.connection.execute("INSERT INTO STUDENTS VALUES(?,?,?,?)",(name,user,email,password))
         self.connection.commit()
