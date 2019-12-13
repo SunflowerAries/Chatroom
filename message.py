@@ -13,15 +13,16 @@ class MessageType(enum.IntEnum):
 
     login_successful = 100
     register_successful = 101
-    friend_online = 102
-    friend_offline = 103
-    room_mem_online = 104
-    room_mem_offline = 105
+    wrong_password = 102
+    user_not_exist = 103
+    username_taken = 104
 
-    wrong_password = 200
-    user_not_exist = 201
-    other_host_login = 202
-    username_taken = 203
+    friend_online = 200
+    friend_offline = 201
+    room_mem_online = 202
+    room_mem_offline = 203
+    other_host_login = 204
+    
 
 have_datagram = [MessageType.send_message, MessageType.login_successful]
 

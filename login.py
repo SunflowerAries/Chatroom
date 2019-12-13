@@ -1,6 +1,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from database_tmp import Db #importing database.py
 from home import Ui_MainWindow
+from message import *
+from event_handler import *
 
 sign = 0
 
@@ -16,36 +18,38 @@ class block(QtWidgets.QWidget):
         self.toInput.setObjectName(name)
         self.box.addWidget(self.toInput)
         self.box.setStretchFactor(self.toInput, 5)
+        self.error(name)
+        self.box.addLayout(self.hbox)
 
-        hbox = QtWidgets.QHBoxLayout()
-        hbox.setContentsMargins(0, 5, 0, 0)
-        hbox.setSpacing(0)
+    def error(self, reason):
+        self.hbox = QtWidgets.QHBoxLayout()
+        self.hbox.setContentsMargins(0, 5, 0, 0)
+        self.hbox.setSpacing(0)
         error = QtWidgets.QLabel()
         jpg2 = QtGui.QPixmap("Pic/error.png")
         error.resize(18, 18)
         error.setPixmap(jpg2.scaled(error.size(), aspectRatioMode= QtCore.Qt.KeepAspectRatio))
         error.setObjectName("Error")
         error.setVisible(False)
-        hbox.addWidget(error)
-        hbox.setStretchFactor(error, 1)
-        # hbox.addStretch(1)
+        self.hbox.addWidget(error)
+        self.hbox.setStretchFactor(error, 1)
+        # self.hbox.addStretch(1)
 
         prompt = QtWidgets.QLabel()
         prompt.resize(200, 50)
-        if name.endswith("Again"):
-            prompt.setText("You should confirm your password")
+        if reason.startswith("Re"):
+            prompt.setText("Two passwords should be consistent")
         else:
-            prompt.setText(name + " cannot be empty")
+            prompt.setText(reason + " cannot be empty")
         prompt.setObjectName("Prompt")
         prompt.setFont(QtGui.QFont(QtGui.QFont("Times", 12, QtGui.QFont.Bold)))
         prompt.setVisible(False)
-        hbox.addWidget(prompt)
-        hbox.setStretchFactor(prompt, 19)
-        hbox.setObjectName("Container")
-        self.box.addLayout(hbox)
+        self.hbox.addWidget(prompt)
+        self.hbox.setStretchFactor(prompt, 19)
+        
 
 class Ui_Dialog2(QtWidgets.QDialog):
-    def setupUi(self, Dialog):
+    def setupUi(self, Dialog, sock):
         Dialog.setObjectName("Signup")
         Dialog.setFixedSize(1200, 720)
         Dialog.setStyleSheet("QDialog{\n"
@@ -59,6 +63,7 @@ class Ui_Dialog2(QtWidgets.QDialog):
 "QPushButton{\n"
 "background-color:#3487ff;background-image: qlineargradient(0deg,#398bff,#3083ff); color:rgb(255,255,255);}\n"
 "")
+        self.sock = sock
         plane = QtWidgets.QHBoxLayout(Dialog)
         plane.setContentsMargins(0, 0, 0, 0)
 
@@ -107,8 +112,8 @@ class Ui_Dialog2(QtWidgets.QDialog):
         vbox.addStretch(1)
 
         self.Password2 = QtWidgets.QWidget()
-        setblock.setupblock(self.Password2, "Password Again")
-        self.PasswordInput2 = self.Password2.findChild(QtWidgets.QLineEdit, "Password Again")
+        setblock.setupblock(self.Password2, "Re-enter password")
+        self.PasswordInput2 = self.Password2.findChild(QtWidgets.QLineEdit, "Re-enter password")
         self.PasswordInput2.setEchoMode(QtWidgets.QLineEdit.Password)
         self.PasswordInput2.installEventFilter(self)
         vbox.addWidget(self.Password2)
@@ -151,6 +156,8 @@ class Ui_Dialog2(QtWidgets.QDialog):
             object.setStyleSheet("border:1px solid #549df8; border-radius:4px;}")
             prompt.setVisible(False)
             error.setVisible(False)
+            if object == self.UsernameInput:
+                prompt.setText("Username cannot be empty")
 
         elif event.type() == QtCore.QEvent.FocusOut:
             text = object.text()
@@ -165,7 +172,12 @@ class Ui_Dialog2(QtWidgets.QDialog):
 
     def BackButton(self):
         self.clearField()
+        if self.handler_for_login_logup in callback_func:
+            callback_func.remove(self.handler_for_login_logup)
         self.close()
+
+    def handler_for_login_logup(self, itype, header):
+        event_hander_map[itype](self, header)
 
     def SignupButton(self):
         username = self.UsernameInput.text()
@@ -175,12 +187,15 @@ class Ui_Dialog2(QtWidgets.QDialog):
         if self.checkFields(username,nickname,password,password2):
             return
         else:
-            if(self.checkPassword(password,password2)):
-                insertDb = Db()
-                insertDb.insertTable(nickname,username,password)
-                self.clearField()
+            if self.checkPassword(password,password2):
+                header = serial_header_pack(MessageType.register, [username, password, nickname])
+                self.sock.conn.send(header)
+                # insertDb = Db()
+                # insertDb.insertTable(nickname,username,password)
+                add_listener(self.handler_for_login_logup)# TODO
+                # self.close()
             else:
-                self.showMessage("Error","Passwords doesn't match")
+                self.prompt(self.PasswordInput2)
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
@@ -193,21 +208,24 @@ class Ui_Dialog2(QtWidgets.QDialog):
     def checkFields(self,username,nickname,password,password2):
         if username=="":
             self.prompt(self.UsernameInput)
-            return
+            return True
         elif nickname=="":
             self.prompt(self.NicknameInput)
-            return
+            return True
         elif password== "":
             self.prompt(self.PasswordInput)
-            return
+            return True
         elif password2=="":
             self.prompt(self.PasswordInput2)
-            return
+            return True
+        return False
 
-    def prompt(self, object):
+    def prompt(self, object, choice=0):
         layout = object.parentWidget()
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
         error = layout.findChild(QtWidgets.QLabel, "Error")
+        if choice == 1 and object == self.UsernameInput:
+            prompt.setText("Username has been taken")
         object.setStyleSheet("border: 1px solid #ff5b5b; focus{\nborder:1px solid #549df8;}\n")
         prompt.setVisible(True)
         error.setVisible(True)
@@ -233,7 +251,7 @@ class Ui_Dialog2(QtWidgets.QDialog):
         self.hide(self.PasswordInput2)
 
 class Ui_Dialog(QtWidgets.QDialog):
-    def setupUi(self, Dialog):
+    def setupUi(self, Dialog, sock):
         Dialog.setObjectName("Dialog")
         Dialog.setFixedSize(1200, 720)
         Dialog.setStyleSheet("QDialog{\n"
@@ -247,6 +265,7 @@ class Ui_Dialog(QtWidgets.QDialog):
 "QPushButton{\n"
 "background-color:#3487ff;background-image: qlineargradient(0deg,#398bff,#3083ff); color:rgb(255,255,255);}\n"
 "")
+        self.sock = sock
         plane = QtWidgets.QHBoxLayout(Dialog)
         plane.setContentsMargins(0, 0, 0, 0)
 
@@ -314,7 +333,10 @@ class Ui_Dialog(QtWidgets.QDialog):
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
-        
+    
+    def handler_for_login_logup(self, itype, header):
+        event_hander_map[itype](self, header)
+
     def eventFilter(self, object, event):        
         layout = object.parentWidget()
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
@@ -323,6 +345,11 @@ class Ui_Dialog(QtWidgets.QDialog):
             object.setStyleSheet("border:1px solid #549df8; border-radius:4px;}")
             prompt.setVisible(False)
             error.setVisible(False)
+            if object == self.UsernameInput:
+                prompt.setText("Username cannot be empty")
+            elif object == self.PasswordInput:
+                prompt.setText("Password cannot be empty")
+            
 
         elif event.type() == QtCore.QEvent.FocusOut:
             text = object.text()
@@ -354,30 +381,39 @@ class Ui_Dialog(QtWidgets.QDialog):
         password = self.PasswordInput.text()
         if self.checkFields(username,password):
             return
-        
-        getDb = Db()        
-        result = getDb.SigninCheck(username,password)
-        if(result):
-            self.welcomePage()
-            self.clearField()
-            print(result)
         else:
-            print("password wrong")
-            self.showMessage("Warning","Invalid Username and Password")
+            header = serial_header_pack(MessageType.login, [username, password])
+            self.sock.conn.send(header)
+            add_listener(self.handler_for_login_logup)
+        # getDb = Db()        
+        # result = getDb.SigninCheck(username,password)
+        # if(result):
+        #     self.welcomePage()
+        #     self.clearField()
+        #     print(result)
+        # else:
+        #     print("password wrong")
+        #     self.showMessage("Warning","Invalid Username and Password")
     
     def checkFields(self,username,password):
         if username=="":
             self.prompt(self.UsernameInput)
-            return
+            return True
         elif password== "":
             self.prompt(self.PasswordInput)
-            return
+            return True
+        return False
 
-    def prompt(self, object):
+    def prompt(self, object, choice=0):
         layout = object.parentWidget()
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
         error = layout.findChild(QtWidgets.QLabel, "Error")
         object.setStyleSheet("border: 1px solid #ff5b5b; focus{\nborder:1px solid #549df8;}\n")
+        if choice == 1:
+            if object == self.UsernameInput:
+                prompt.setText("Username does not exist")
+            elif object == self.PasswordInput:
+                prompt.setText("Password you have entered is incorrect")
         prompt.setVisible(True)
         error.setVisible(True)
 
@@ -392,6 +428,8 @@ class Ui_Dialog(QtWidgets.QDialog):
 
     def SignupButton(self):   
         self.clearField()
+        if self.handler_for_login_logup in callback_func:
+            callback_func.remove(self.handler_for_login_logup)
         self.close()
                 
     def clearField(self):
@@ -399,32 +437,33 @@ class Ui_Dialog(QtWidgets.QDialog):
         self.hide(self.PasswordInput)
 
 class Dialog(Ui_Dialog):
-    def __init__(self, parent=None):
+    def __init__(self, sock, parent=None):
         super(Dialog, self).__init__(parent)
-        self.setupUi(self)
-        # self.btnSignup.clicked.connect(self.close)
+        self.setupUi(self, sock)
+        self.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, True)
 
 class Dialog2(Ui_Dialog2):
-    def __init__(self, parent=None):
+    def __init__(self, sock, parent=None):
         super(Dialog2, self).__init__(parent)
-        self.setupUi(self)
-        # self.btnBack.clicked.connect(self.close)
+        self.setupUi(self, sock)
+        self.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, True)
 
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    Window1 = Dialog()
-    Window2 = Dialog2()
-    # ui = Ui_Dialog2()
-    # ui.setupUi(Dialog)
-
-    # Dialog2 = QtWidgets.QDialog()
-    # ui2 = Ui_Dialog()
-    # ui2.setupUi(Dialog2)
+# if __name__ == "__main__":
+#     import sys
+#     app = QtWidgets.QApplication(sys.argv)
+#     Window1 = Dialog()
+#     Window2 = Dialog2()
     
-    Window1.btnSignup.clicked.connect(Window2.show)
-    Window2.btnBack.clicked.connect(Window1.show)
-    Window1.show()
+#     Window1.btnSignup.clicked.connect(Window2.show)
+#     Window2.btnBack.clicked.connect(Window1.show)
+#     Window1.show()
 
-    sys.exit(app.exec_())
+#     sys.exit(app.exec_())
 
+event_hander_map = {
+    MessageType.login_successful: login_successful,
+    MessageType.register_successful: register_successful,
+    MessageType.username_taken: username_taken,
+    MessageType.user_not_exist: user_not_exist,
+    MessageType.wrong_password: wrong_password,
+}

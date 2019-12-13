@@ -3,6 +3,11 @@ from message import *
 from pack import *
 import database
 
+callback_func = []
+
+def add_listener(func):
+    callback_func.append(func)
+
 def login(sock, parameters):
     print('in login')
     c = database.get_cursor()
@@ -81,18 +86,24 @@ def login(sock, parameters):
     header = serial_header_pack(MessageType.login_successful, tmp)
     sock.conn.send(header + data)
 
-def login_successful(sock, parameters):
+def login_successful(self, parameters):
     print('login_successful')
-    print(parameters)
-    data = serial_data_unpack(sock)
-    print(data)
+    # print(parameters)
+    self.clearField()
+    if self.handler_for_login_logup in callback_func:
+            callback_func.remove(self.handler_for_login_logup)
+    self.close()
+    # data = serial_data_unpack(sock)
+    # print(data)
 
-def user_not_exist(sock, parameters):
+def user_not_exist(self, parameters):
     print('user_not_exist')
+    self.prompt(self.UsernameInput, 1)
     print(parameters)
 
-def wrong_password(sock, parameters):
+def wrong_password(self, parameters):
     print('wrong_password')
+    self.prompt(self.PasswordInput, 1)
     print(parameters)
 
 def other_host_login(sock, parameters):
@@ -122,12 +133,17 @@ def register(sock, parameters):
     # print(sock)
     sock.conn.send(header)
 
-def register_successful(sock, parameters):
+def register_successful(self, parameters):
     print('register_successful')
-    print(parameters)
+    self.clearField()
+    if self.handler_for_login_logup in callback_func:
+            callback_func.remove(self.handler_for_login_logup)
+    self.close()
+    # print(parameters)
 
-def username_taken(sock, parameters):
+def username_taken(self, parameters):
     print('username_taken')
+    self.prompt(self.UsernameInput, 1)
     print(parameters)
 
 def add_friend(sock, parameters):
@@ -157,11 +173,11 @@ event_hander_map = {
     MessageType.join_room: join_room,
     MessageType.create_room: create_room,
     MessageType.query_room_users: query_room_users,
-    MessageType.login_successful: login_successful,
-    MessageType.register_successful: register_successful,
-    MessageType.username_taken: username_taken,
-    MessageType.user_not_exist: user_not_exist,
-    MessageType.wrong_password: wrong_password,
+    # MessageType.login_successful: login_successful,
+    # MessageType.register_successful: register_successful,
+    # MessageType.username_taken: username_taken,
+    # MessageType.user_not_exist: user_not_exist,
+    # MessageType.wrong_password: wrong_password,
     MessageType.other_host_login: other_host_login,
     MessageType.friend_online: friend_online,
     MessageType.room_mem_online: room_mem_online,

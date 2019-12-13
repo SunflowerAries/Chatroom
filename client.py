@@ -1,8 +1,8 @@
 import socket, select, struct, threading
 from pprint import pprint
 import time, sys, traceback
-from message import *
 from listen import *
+import login as lg
 
 class ChatClient(threading.Thread):
     def __init__(self, conn):
@@ -28,11 +28,17 @@ def startup(sock):
 def main(dst, port):
     client_socket = socket.socket()
     client_socket.connect((dst, port))
-    # reply = client_socket.recv(1024).decode()
-    # print(reply)
     client = ChatClient(client_socket)
     client.start()
-    startup(client)
+    # startup(client)
+    app = lg.QtWidgets.QApplication(sys.argv)
+    login = lg.Dialog(client)
+    register = lg.Dialog2(client)
+    login.btnSignup.clicked.connect(register.show)
+    register.btnBack.clicked.connect(login.show)
+    login.show()
+
+    sys.exit(app.exec_())
 
 if __name__ == '__main__':
     try:

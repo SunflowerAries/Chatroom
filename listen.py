@@ -21,9 +21,12 @@ def listener(host):
             print('type: ', itype)
             header = convert(itype, host)
         try:
-            handler(host, itype, header)
+            if itype >= 100 and itype < 200:
+                for func in callback_func:
+                    func(itype, header)
+            else:
+                handler(host, itype, header)
         except:
             pprint(sys.exc_info())
             traceback.print_exc(file=sys.stdout)
             pass
-            
