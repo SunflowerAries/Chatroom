@@ -190,10 +190,7 @@ class Ui_Dialog2(QtWidgets.QDialog):
             if self.checkPassword(password,password2):
                 header = serial_header_pack(MessageType.register, [username, password, nickname])
                 self.sock.conn.send(header)
-                # insertDb = Db()
-                # insertDb.insertTable(nickname,username,password)
                 add_listener(self.handler_for_login_logup)# TODO
-                # self.close()
             else:
                 self.prompt(self.PasswordInput2)
 
@@ -225,7 +222,7 @@ class Ui_Dialog2(QtWidgets.QDialog):
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
         error = layout.findChild(QtWidgets.QLabel, "Error")
         if choice == 1 and object == self.UsernameInput:
-            prompt.setText("Username has been taken")
+            prompt.setText("This username has been taken")
         object.setStyleSheet("border: 1px solid #ff5b5b; focus{\nborder:1px solid #549df8;}\n")
         prompt.setVisible(True)
         error.setVisible(True)
@@ -385,15 +382,6 @@ class Ui_Dialog(QtWidgets.QDialog):
             header = serial_header_pack(MessageType.login, [username, password])
             self.sock.conn.send(header)
             add_listener(self.handler_for_login_logup)
-        # getDb = Db()        
-        # result = getDb.SigninCheck(username,password)
-        # if(result):
-        #     self.welcomePage()
-        #     self.clearField()
-        #     print(result)
-        # else:
-        #     print("password wrong")
-        #     self.showMessage("Warning","Invalid Username and Password")
     
     def checkFields(self,username,password):
         if username=="":
