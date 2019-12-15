@@ -3,6 +3,7 @@ from pprint import pprint
 import time, sys, traceback
 from listen import *
 import login as lg
+from try1 import Window
 
 class ChatClient(threading.Thread):
     def __init__(self, conn):
@@ -31,11 +32,13 @@ def main(dst, port):
     client = ChatClient(client_socket)
     client.start()
     # startup(client)
+    # Window1 = Window()
     app = lg.QtWidgets.QApplication(sys.argv)
     login = lg.Dialog(client)
     register = lg.Dialog2(client)
     login.btnSignup.clicked.connect(register.show)
     register.btnBack.clicked.connect(login.show)
+    # login.btnSignup.clicked.connect(Window1.show)
     login.show()
 
     sys.exit(app.exec_())

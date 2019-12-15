@@ -2,6 +2,7 @@ import socket, time
 from message import *
 from pack import *
 import database
+from try1 import Window
 
 callback_func = []
 
@@ -91,10 +92,13 @@ def login_successful(self, parameters):
     # print(parameters)
     self.clearField()
     if self.handler_for_login_logup in callback_func:
-            callback_func.remove(self.handler_for_login_logup)
+        callback_func.remove(self.handler_for_login_logup)
+    Window1 = Window()
+    Window1.show()
+    data = serial_data_unpack(self.sock)
+    print(data)
     self.close()
-    # data = serial_data_unpack(sock)
-    # print(data)
+    
 
 def user_not_exist(self, parameters):
     print('user_not_exist')

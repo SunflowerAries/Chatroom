@@ -6,11 +6,25 @@ def setupIcon(Icon, url, size):
     Icon.setPixmap(jpg.scaled(Icon.size(), aspectRatioMode= QtCore.Qt.KeepAspectRatio))
 
 class Ui_MainWindow(QtWidgets.QMainWindow):
-    def __init__(self, sock, parent=None):
-        super(QtWidgets.QMainWindow, self).__init__(parent)
-        self.setObjectName("MainWindow")
-        self.setFixedSize(1330, 980)
-        self.setStyleSheet("QLineEdit{\n"
+    def setupUi(self, Window, parent=None):
+        # super(QtWidgets.QMainWindow, self).__init__(parent)
+#         self.setObjectName("MainWindow")
+#         self.setFixedSize(1330, 980)
+#         self.setStyleSheet("QLineEdit{\n"
+# "border:none; color:#fff;}\n"
+# "QLabel#selfie{\n"
+# "border-radius:200px;}\n"
+# "QLabel{\n"
+# "border-right: 1px solid #24272c; color:#fff; border-radius: 20px}\n"
+# "\n"
+# "QPushButton{\n"
+# "    background-color:qradialgradient(spread:repeat, cx:0.5, cy:0.5, radius:0.077, fx:0.5, fy:0.5, stop:0 rgba(0, 169, 255, 147), stop:0.497326 rgba(0, 0, 0, 147), stop:1 rgba(0, 169, 255, 147));\n"
+# "color:rgb(255, 255, 255)\n"
+# "}\n"
+# "")
+        Window.setObjectName("MainWindow")
+        Window.setFixedSize(1330, 980)
+        Window.setStyleSheet("QLineEdit{\n"
 "border:none; color:#fff;}\n"
 "QLabel#selfie{\n"
 "border-radius:200px;}\n"
@@ -22,9 +36,11 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
 "color:rgb(255, 255, 255)\n"
 "}\n"
 "")
-        self.sock = sock
-        toppanel = QtWidgets.QWidget(self)
-        self.setCentralWidget(toppanel)
+        toppanel = QtWidgets.QWidget()
+        Window.setCentralWidget(toppanel)
+        # self.sock = sock
+        # toppanel = QtWidgets.QWidget(self)
+        # self.setCentralWidget(toppanel)
         panel = QtWidgets.QHBoxLayout()
         panel.setContentsMargins(0, 0, 0, 0)
         panel.setSpacing(0)
@@ -126,8 +142,8 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
 
         toppanel.setLayout(panel)
 
-        self.retranslateUi()
-        QtCore.QMetaObject.connectSlotsByName(self)
+        self.retranslateUi(Window)
+        QtCore.QMetaObject.connectSlotsByName(Window)
         
     def eventFilter(self, object, event):
         if event.type() == QtCore.QEvent.MouseButtonPress:
@@ -139,9 +155,9 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
                 self.switchtoDiscovery(event)
         return super(Ui_MainWindow, self).eventFilter(object, event)
 
-    def retranslateUi(self):
+    def retranslateUi(self, Window):
         _translate = QtCore.QCoreApplication.translate
-        self.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        Window.setWindowTitle(_translate("MainWindow", "Homepage"))
 
     def switchtoChat(self, event):
         print("In chat")
@@ -165,12 +181,16 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
 # class Mainwindow(Ui_MainWindow):
 #     def __init__(self, parent=None):
 #         super(Ui_MainWindow, self).__init__(parent)
-        
+
+class Window(Ui_MainWindow):
+    def __init__(self, parent=None):
+        super(Window, self).__init__(parent)
+        self.setupUi(self)
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    Window = Ui_MainWindow()
+    Window = Window()
     Window.show()
     sys.exit(app.exec_())
 

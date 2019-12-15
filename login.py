@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from database_tmp import Db #importing database.py
-from home import Ui_MainWindow
+# from database_tmp import Db #importing database.py
+from try1 import Window
 from message import *
 from event_handler import *
 
@@ -55,7 +55,7 @@ class Ui_Dialog2(QtWidgets.QDialog):
         Dialog.setStyleSheet("QDialog{\n"
         "background-color:rgb(255, 255, 255);}\n}"
 "QLineEdit{\n"
-"background-color:rgb(255, 0, 0, 0); border: 1px solid #aaa; border-radius:4px;}\n"
+"background-color:rgba(255, 0, 0, 0); border: 1px solid #aaa; border-radius:4px;}\n"
 "\n"
 "QLabel{\n"
 "color:#ff5b5b;}"
@@ -254,7 +254,7 @@ class Ui_Dialog(QtWidgets.QDialog):
         Dialog.setStyleSheet("QDialog{\n"
         "background-color:rgb(255, 255, 255);}\n}"
 "QLineEdit{\n"
-"background-color:rgb(255, 0, 0, 0); border: 2px solid #aaa; border-radius:4px}\n"
+"background-color:rgba(255, 0, 0, 0); border: 2px solid #aaa; border-radius:4px}\n"
 "\n"
 "QLabel{\n"
 "color:#ff5b5b;}"
@@ -366,12 +366,6 @@ class Ui_Dialog(QtWidgets.QDialog):
         self.btnSignin.setFont(QtGui.QFont(QtGui.QFont("Times", 24, QtGui.QFont.Bold)))
         self.btnSignup.setText(_translate("Dialog", "Sign Up"))
         self.btnSignup.setFont(QtGui.QFont(QtGui.QFont("Times", 12, QtGui.QFont.Bold)))
-        
-    def welcomePage(self):
-        self.homWindow = QtWidgets.QMainWindow()
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self.homWindow)
-        self.homWindow.show()
         
     def SigninCheck(self):
         username = self.UsernameInput.text()

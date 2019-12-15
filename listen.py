@@ -12,6 +12,7 @@ def listener(host):
             # print(itype)
         except ConnectionError:
             conn_state = False
+        print(itype)
         if len(itype) < 4:
             conn_state = False
         if not conn_state:
