@@ -10,18 +10,22 @@ class MessageType(enum.IntEnum):
     join_room = 6
     create_room = 7
     query_room_users = 8
+    query_friend = 9
 
     login_successful = 100
     register_successful = 101
     wrong_password = 102
     user_not_exist = 103
     username_taken = 104
+    friend_found = 105
+    friend_not_found = 106
 
     friend_online = 200
     friend_offline = 201
     room_mem_online = 202
     room_mem_offline = 203
     other_host_login = 204
+    
     
 
 have_datagram = [MessageType.send_message, MessageType.login_successful]
@@ -42,7 +46,6 @@ def login_successful_parsing(parameters):
     header['ID'] = parameters[1]
     header['Username'] = parameters[2]
     header['Nickname'] = parameters[3]
-    header['Length'] = parameters[4]
     print(header)
     return header
 
@@ -61,6 +64,8 @@ def register_successful_parsing(parameters):
     header = {}
     header['Date'] = parameters[0]
     header['ID'] = parameters[1]
+    header['Username'] = parameters[2]
+    header['Nickname'] = parameters[3]
     print(header)
     return header
 
@@ -114,7 +119,26 @@ def message_parsing(host):
     parameters = host.conn.recv(32)
     header['Date'] = parameters[0].decode()
     header['User'] = parameters[1].decode()
-    header['Length'] = parameters[2].decode()
+    return header
+
+def friend_found_parsing(parameters):
+    print('friend_found_parsing')
+    header = {}
+    header['Date'] = parameters[0]
+    return header
+
+def friend_not_found_parsing(parameters):
+    print('friend_not_found_parsing')
+    header = {}
+    header['Date'] = parameters[0]
+    return header
+
+def query_friend_parsing(parameters):
+    print('query_friend_parsing')
+    header = {}
+    header['Date'] = parameters[0]
+    header['Name'] = parameters[1]
+    print(header)
     return header
 
 header_parsing = {
@@ -126,6 +150,7 @@ header_parsing = {
     # MessageType.join_room: join_room,
     # MessageType.create_room: create_room,
     # MessageType.query_room_users: query_room_users,
+    MessageType.query_friend: query_friend_parsing,
     MessageType.login_successful: login_successful_parsing,
     MessageType.register_successful: register_successful_parsing,
     MessageType.username_taken: username_taken_parsing,
@@ -134,6 +159,8 @@ header_parsing = {
     MessageType.other_host_login: other_host_login_parsing,
     MessageType.friend_online: friend_online_parsing,
     MessageType.room_mem_online: room_mem_online_parsing,
+    MessageType.friend_found: friend_found_parsing,
+    MessageType.friend_not_found: friend_not_found_parsing,
 }
 
 def convert(itype, host):

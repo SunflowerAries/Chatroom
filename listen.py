@@ -2,6 +2,7 @@ import struct, traceback, select, sys
 from pprint import pprint
 from message import *
 from event_handler import *
+Dialogs = []
 
 def listener(host):
     while True:

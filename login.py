@@ -1,8 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-# from database_tmp import Db #importing database.py
-from try1 import Window
 from message import *
 from event_handler import *
+from listen import Dialogs
 
 sign = 0
 
@@ -16,6 +15,7 @@ class block(QtWidgets.QWidget):
         self.toInput.setPlaceholderText(name)
         self.toInput.setFont(QtGui.QFont(QtGui.QFont("Times", 24, QtGui.QFont.Bold)))
         self.toInput.setObjectName(name)
+        self.toInput.setStyleSheet("background-color:rgba(255, 0, 0, 0); border: 1px solid #aaa; border-radius:4px;")
         self.box.addWidget(self.toInput)
         self.box.setStretchFactor(self.toInput, 5)
         self.error(name)
@@ -36,6 +36,7 @@ class block(QtWidgets.QWidget):
         # self.hbox.addStretch(1)
 
         prompt = QtWidgets.QLabel()
+        prompt.setStyleSheet("color: #ff5b5b;")
         prompt.resize(200, 50)
         if reason.startswith("Re"):
             prompt.setText("Two passwords should be consistent")
@@ -54,8 +55,6 @@ class Ui_Dialog2(QtWidgets.QDialog):
         Dialog.setFixedSize(1200, 720)
         Dialog.setStyleSheet("QDialog{\n"
         "background-color:rgb(255, 255, 255);}\n}"
-"QLineEdit{\n"
-"background-color:rgba(255, 0, 0, 0); border: 1px solid #aaa; border-radius:4px;}\n"
 "\n"
 "QLabel{\n"
 "color:#ff5b5b;}"
@@ -177,7 +176,30 @@ class Ui_Dialog2(QtWidgets.QDialog):
         self.close()
 
     def handler_for_login_logup(self, itype, header):
-        event_hander_map[itype](self, header)
+        if itype == MessageType.register_successful:
+            self.register_successful(header)
+        elif itype == MessageType.username_taken:
+            self.username_taken(header)
+
+    def register_successful(self, parameters):
+        print('register_successful', parameters)
+        self.clearField()
+        if self.handler_for_login_logup in callback_func:
+            callback_func.remove(self.handler_for_login_logup)
+        # data = serial_data_unpack(self.sock)
+        info = {}
+        info['Nickname'] = parameters['Nickname']
+        info['Username'] = parameters['Username']
+        # info['Friend'] = data[0]['Friend']
+        Dialogs[2].Info(info)
+        Dialogs[2].show()
+        # print(data)
+        self.close()
+
+    def username_taken(self, parameters):
+        print('username_taken')
+        self.prompt(self.UsernameInput, 1)
+        print(parameters)
 
     def SignupButton(self):
         username = self.UsernameInput.text()
@@ -190,7 +212,8 @@ class Ui_Dialog2(QtWidgets.QDialog):
             if self.checkPassword(password,password2):
                 header = serial_header_pack(MessageType.register, [username, password, nickname])
                 self.sock.conn.send(header)
-                add_listener(self.handler_for_login_logup)# TODO
+                if self.handler_for_login_logup not in callback_func:
+                    add_listener(self.handler_for_login_logup)# TODO
             else:
                 self.prompt(self.PasswordInput2)
 
@@ -332,7 +355,38 @@ class Ui_Dialog(QtWidgets.QDialog):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
     
     def handler_for_login_logup(self, itype, header):
-        event_hander_map[itype](self, header)
+        if itype == MessageType.login_successful:
+            self.login_successful(header)
+        elif itype == MessageType.user_not_exist:
+            self.user_not_exist(header)
+        elif itype == MessageType.wrong_password:
+            self.wrong_password(header)
+
+    def login_successful(self, parameters):
+        print('login_successful')
+        # print(parameters)
+        self.clearField()
+        if self.handler_for_login_logup in callback_func:
+            callback_func.remove(self.handler_for_login_logup)
+        data = serial_data_unpack(self.sock)
+        info = {}
+        info['Nickname'] = parameters['Nickname']
+        info['Username'] = parameters['Username']
+        info['Friend'] = data[0]['Friend']
+        Dialogs[2].Info(info)
+        Dialogs[2].show()
+        print(data)
+        self.close()
+
+    def user_not_exist(self, parameters):
+        print('user_not_exist')
+        self.prompt(self.UsernameInput, 1)
+        print(parameters)
+
+    def wrong_password(self, parameters):
+        print('wrong_password')
+        self.prompt(self.PasswordInput, 1)
+        print(parameters)
 
     def eventFilter(self, object, event):        
         layout = object.parentWidget()
@@ -375,7 +429,8 @@ class Ui_Dialog(QtWidgets.QDialog):
         else:
             header = serial_header_pack(MessageType.login, [username, password])
             self.sock.conn.send(header)
-            add_listener(self.handler_for_login_logup)
+            if self.handler_for_login_logup not in callback_func:
+                add_listener(self.handler_for_login_logup)
     
     def checkFields(self,username,password):
         if username=="":
@@ -441,11 +496,3 @@ class Dialog2(Ui_Dialog2):
 #     Window1.show()
 
 #     sys.exit(app.exec_())
-
-event_hander_map = {
-    MessageType.login_successful: login_successful,
-    MessageType.register_successful: register_successful,
-    MessageType.username_taken: username_taken,
-    MessageType.user_not_exist: user_not_exist,
-    MessageType.wrong_password: wrong_password,
-}
