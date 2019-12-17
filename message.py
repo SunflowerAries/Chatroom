@@ -5,12 +5,11 @@ class MessageType(enum.IntEnum):
     login = 1
     register = 2
     add_friend = 3
-    resolve_friend_request = 4
-    send_message = 5
-    join_room = 6
-    create_room = 7
-    query_room_users = 8
-    query_friend = 9
+    send_message = 4
+    join_room = 5
+    create_room = 6
+    query_room_users = 7
+    query_friend = 8
 
     login_successful = 100
     register_successful = 101
@@ -19,9 +18,13 @@ class MessageType(enum.IntEnum):
     username_taken = 104
     friend_found = 105
     friend_not_found = 106
+    add_friend_successful = 107
+    friend_request_rejected = 108
+    resolve_friend_request = 109
 
     friend_online = 200
     friend_offline = 201
+
     room_mem_online = 202
     room_mem_offline = 203
     other_host_login = 204
@@ -141,10 +144,19 @@ def query_friend_parsing(parameters):
     print(header)
     return header
 
+def add_friend_parsing(parameters):
+    print('add_friend_parsing')
+    header = {}
+    header['Date'] = parameters[0]
+    header['Sender'] = parameters[1]
+    header['Receiver'] = parameters[2]
+    print(header)
+    return header
+
 header_parsing = {
     MessageType.login: login_parsing,
     MessageType.register: register_parsing,
-    # MessageType.add_friend: add_friend,
+    MessageType.add_friend: add_friend_parsing,
     # MessageType.resolve_friend_request: resolve_friend_request,
     MessageType.send_message: message_parsing,
     # MessageType.join_room: join_room,

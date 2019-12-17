@@ -108,6 +108,28 @@ def register(sock, parameters):
 
 def add_friend(sock, parameters):
     print('in add_friend')
+    user_id = sc_to_user_id[sc]
+    # parameters = username
+    c = database.get_cursor()
+    username = parameters.strip().lower()
+    r = c.execute('SELECT id from users where username=?', [username]).fetchall()
+    if len(r) == 0:
+        sc.send(MessageType.add_friend_result, [False, '用户名不存在'])
+        return
+    uid = r[0][0]
+    if uid == user_id:
+        sc.send(MessageType.add_friend_result, [False, '不能加自己为好友'])
+        return
+    c = database.get_cursor()
+    r = c.execute('SELECT 1 from friends where from_user_id=? and to_user_id=?', [user_id, uid]).fetchall()
+    if len(r) != 0:
+        sc.send(MessageType.add_friend_result, [False, '已经是好友/已经发送过好友请求'])
+        return
+    c = database.get_cursor()
+    c.execute('insert into friends (from_user_id,to_user_id,accepted) values (?,?,0)', [user_id, uid]).fetchall()
+    sc.send(MessageType.add_friend_result, [True, ''])
+    if uid in user_id_to_sc:
+        user_id_to_sc[uid].send(MessageType.incoming_friend_request, database.get_user(user_id))
 
 def resolve_friend_request(sock, parameters):
     print('in resolve_friend_request')
@@ -134,7 +156,10 @@ def query_friend(sock, parameters):
     friend = []
     if len(rows) > 0:
         for i in range(len(rows)):
-            tmp = list(rows[i])
+            tmp = {}
+            tmp['ID'] = rows[i][0]
+            tmp['Username'] = rows[i][1]
+            tmp['Nickname'] = rows[i][2]
             print(tmp)
             friend.append(tmp)
         data = serial_data_pack(friend)

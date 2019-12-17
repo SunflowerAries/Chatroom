@@ -3,45 +3,49 @@ from message import *
 from event_handler import *
 from listen import Dialogs
 
-sign = 0
-
 class block(QtWidgets.QWidget):
-    def setupblock(self, QWidget, name):
+    def setupblock(self, QWidget, name, suffix=None, sign=None):
         self.box = QtWidgets.QVBoxLayout(QWidget)
         self.box.setContentsMargins(0, 0, 0, 0)
         self.box.setSpacing(0)
-        self.toInput = QtWidgets.QLineEdit()
-        # self.toInput = MyLineEdit()
-        self.toInput.setPlaceholderText(name)
-        self.toInput.setFont(QtGui.QFont(QtGui.QFont("Times", 24, QtGui.QFont.Bold)))
-        self.toInput.setObjectName(name)
-        self.toInput.setStyleSheet("background-color:rgba(255, 0, 0, 0); border: 1px solid #aaa; border-radius:4px;")
-        self.box.addWidget(self.toInput)
-        self.box.setStretchFactor(self.toInput, 5)
-        self.error(name)
+        if sign == None:
+            self.toInput = QtWidgets.QLineEdit()
+            # self.toInput = MyLineEdit()
+            self.toInput.setPlaceholderText(name)
+            self.toInput.setFont(QtGui.QFont(QtGui.QFont("Times", 24, QtGui.QFont.Bold)))
+            self.toInput.setObjectName(name)
+            self.toInput.setStyleSheet("background-color:rgba(255, 0, 0, 0); border: 1px solid #aaa; border-radius:4px;")
+            self.box.addWidget(self.toInput)
+            self.box.setStretchFactor(self.toInput, 5)
+        self.prompt(name, suffix)
         self.box.addLayout(self.hbox)
 
-    def error(self, reason):
+    def prompt(self, reason, suffix=None):
         self.hbox = QtWidgets.QHBoxLayout()
         self.hbox.setContentsMargins(0, 5, 0, 0)
         self.hbox.setSpacing(0)
         error = QtWidgets.QLabel()
-        jpg2 = QtGui.QPixmap("Pic/error.png")
+        prompt = QtWidgets.QLabel()
+        if suffix != None:
+            jpg2 = QtGui.QPixmap("Pic/Finished.png")
+            prompt.setStyleSheet("color: #91ED61;")
+            prompt.setText(suffix)
+        else:
+            jpg2 = QtGui.QPixmap("Pic/error.png")
+            prompt.setStyleSheet("color: #ff5b5b;")
+            if reason.startswith("Re"):
+                prompt.setText("Two passwords should be consistent")
+            else:
+                prompt.setText(reason + " cannot be empty")
         error.resize(18, 18)
         error.setPixmap(jpg2.scaled(error.size(), aspectRatioMode= QtCore.Qt.KeepAspectRatio))
         error.setObjectName("Error")
         error.setVisible(False)
         self.hbox.addWidget(error)
         self.hbox.setStretchFactor(error, 1)
-        # self.hbox.addStretch(1)
 
-        prompt = QtWidgets.QLabel()
-        prompt.setStyleSheet("color: #ff5b5b;")
         prompt.resize(200, 50)
-        if reason.startswith("Re"):
-            prompt.setText("Two passwords should be consistent")
-        else:
-            prompt.setText(reason + " cannot be empty")
+        
         prompt.setObjectName("Prompt")
         prompt.setFont(QtGui.QFont(QtGui.QFont("Times", 12, QtGui.QFont.Bold)))
         prompt.setVisible(False)
@@ -186,14 +190,8 @@ class Ui_Dialog2(QtWidgets.QDialog):
         self.clearField()
         if self.handler_for_login_logup in callback_func:
             callback_func.remove(self.handler_for_login_logup)
-        # data = serial_data_unpack(self.sock)
-        info = {}
-        info['Nickname'] = parameters['Nickname']
-        info['Username'] = parameters['Username']
-        # info['Friend'] = data[0]['Friend']
-        Dialogs[2].Info(info)
+        Dialogs[2].Info(parameters)
         Dialogs[2].show()
-        # print(data)
         self.close()
 
     def username_taken(self, parameters):
@@ -369,11 +367,10 @@ class Ui_Dialog(QtWidgets.QDialog):
         if self.handler_for_login_logup in callback_func:
             callback_func.remove(self.handler_for_login_logup)
         data = serial_data_unpack(self.sock)
-        info = {}
-        info['Nickname'] = parameters['Nickname']
-        info['Username'] = parameters['Username']
-        info['Friend'] = data[0]['Friend']
-        Dialogs[2].Info(info)
+
+        if Dialogs[2].handler_for_online not in callback_func:
+            add_listener(Dialogs[2].handler_for_online)
+        Dialogs[2].Info(parameters)
         Dialogs[2].show()
         print(data)
         self.close()

@@ -2,6 +2,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from login import block
 from event_handler import *
 
+friendList = []
+toclick = []
+
 def setupIcon(Icon, url, size):
     jpg = QtGui.QPixmap(url)
     Icon.resize(size[0], size[1])
@@ -21,6 +24,11 @@ def Ray(object, num): # 0: blue 1: red
         object.setStyleSheet("border:1px solid #ff5b5b; border-radius:4px;\n")
 
 class Ui_Dialog3(QtWidgets.QWidget):
+    clearSignal = QtCore.pyqtSignal(int)
+    show_listSignal = QtCore.pyqtSignal(int)
+    selfInformation = {}
+    tosend = -1
+    myfriend = []
     def setupUi(self, Dialog, sock):
         Dialog.setObjectName("MainDialog")
         Dialog.setFixedSize(1330, 980)
@@ -57,10 +65,10 @@ class Ui_Dialog3(QtWidgets.QWidget):
 
         self.name = QtWidgets.QLabel()
         self.name.resize(200, 45)
-        # self.name.setText("二立")
         self.name.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
         self.info.addWidget(self.name)
-        self.info.setStretchFactor(self.name, 6)
+        self.info.setStretchFactor(self.name, 6)        
+        # self.name.setText("二立")
 
         self.add = QtWidgets.QLabel()
         setupIcon(self.add, 'Pic/add.png', [26, 26])
@@ -152,6 +160,9 @@ class Ui_Dialog3(QtWidgets.QWidget):
                 self.switchtoDiscovery(event)
             elif object == self.add:
                 self.showAdd(event)
+            elif object in toclick:
+                self.tosend = toclick.index(object)
+                self.friendImage(event)
 
         elif event.type() == QtCore.QEvent.FocusIn:
             Ray(object, 0)
@@ -171,6 +182,68 @@ class Ui_Dialog3(QtWidgets.QWidget):
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Homepage"))
+
+    def friendImage(self, event):
+        self.image = QtWidgets.QDialog()
+        self.image.setFixedSize(300, 300)
+        panel = QtWidgets.QVBoxLayout(self.image)
+        
+        panel.setContentsMargins(20, 0, 20, 0)
+        panel.setSpacing(0)
+        
+        selfie = QtWidgets.QLabel()
+        selfie.setAlignment(QtCore.Qt.AlignCenter)
+        setupIcon(selfie, 'Pic/Selfie-init.png', [200, 200])
+        selfie.setObjectName('selfie')
+        panel.addWidget(selfie)
+        panel.setStretchFactor(selfie, 6)
+
+        name = QtWidgets.QLabel()
+        name.resize(200, 45)
+        name.setText(friendList[self.tosend]["Nickname"] + "(" + friendList[self.tosend]["Username"] + ")")
+        name.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        name.setAlignment(QtCore.Qt.AlignCenter)
+        panel.addWidget(name)
+        panel.setStretchFactor(name, 2)
+        panel.addStretch(1)
+
+        line = QtWidgets.QHBoxLayout()
+        line.addStretch(1)
+        button = QtWidgets.QPushButton()
+        button.setFont(QtGui.QFont(QtGui.QFont("Arial", 24)))
+        button.setText("Add Him")
+        button.setStyleSheet("background-color:#3487ff;background-image: qlineargradient(0deg,#398bff,#3083ff); color:rgb(255,255,255);")
+        button.clicked.connect(self.sendRequest)
+        line.addWidget(button)
+        line.setStretchFactor(button, 3)
+        line.addStretch(1)
+        button.setObjectName("Button")
+        panel.addLayout(line)
+
+        setblock = block()
+        box = QtWidgets.QWidget()
+        setblock.setupblock(box, "Finished", "Request has been sent successfully", 0)
+        panel.addWidget(box)
+        panel.setStretchFactor(box, 2)
+        panel.addStretch(1)
+
+        self.image.show()
+
+    def sendRequest(self):
+        if self.tosend != -1:
+            prompt = self.image.findChild(QtWidgets.QLabel, "Prompt")
+            error = self.image.findChild(QtWidgets.QLabel, "Error")
+            if friendList[self.tosend]["ID"] == self.selfInformation["ID"]:
+                prompt.setText("Sorry, but you're adding yourself")
+                prompt.setStyleSheet("color: #ff5b5b;")
+                jpg2 = QtGui.QPixmap("Pic/error.png")
+                error.setPixmap(jpg2.scaled(error.size(), aspectRatioMode= QtCore.Qt.KeepAspectRatio))
+            else:
+                header = serial_header_pack(MessageType.add_friend, [self.selfInformation, friendList[self.tosend]])
+                self.sock.conn.send(header)
+                prompt.setText("Request has been sent successfully")
+            prompt.setVisible(True)
+            error.setVisible(True)
 
     def showAdd(self, event):
         print("In show")
@@ -241,7 +314,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
 
         vbox = QtWidgets.QVBoxLayout()
         vbox.setSpacing(0)
-        vbox.setContentsMargins(0, 20, 0, 0)
+        vbox.setContentsMargins(0, 20, 0, 20)
 
         setblock = block()
         self.Searchfriend = QtWidgets.QWidget()
@@ -253,6 +326,9 @@ class Ui_Dialog3(QtWidgets.QWidget):
         vbox.setStretchFactor(self.Searchfriend, 2)
         vbox.addStretch(1)
 
+        self.clearSignal.connect(self.clearLayout)
+        self.show_listSignal.connect(self.show_list)
+
         self.searchname = QtWidgets.QPushButton()
         self.searchname.setFont(QtGui.QFont(QtGui.QFont("Arial", 24)))
         self.searchname.setText("Find")
@@ -262,11 +338,25 @@ class Ui_Dialog3(QtWidgets.QWidget):
         vbox.setStretchFactor(self.searchname, 2)
         vbox.addStretch(1)
 
+        scroll = QtWidgets.QScrollArea()
+        scroll.setStyleSheet("border: 1px solid #D8D8D8; border-radius: 4px;")
+        scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        scroll.setWidgetResizable(True)
+        scroll.setFixedHeight(220)
+
         self.list_for_searchnameContainer = QtWidgets.QWidget()
-        self.list_for_searchname = QtWidgets.QVBoxLayout(self.list_for_searchnameContainer)
-        vbox.addWidget(self.list_for_searchnameContainer)
-        vbox.setStretchFactor(self.list_for_searchnameContainer, 8)
-        
+        self.list_for_searchname = QtWidgets.QVBoxLayout()
+        self.list_for_searchnameContainer.setLayout(self.list_for_searchname)
+        self.list_for_searchname.setSpacing(0)
+        self.list_for_searchname.setContentsMargins(0, 0, 0, 0)
+        spacer = QtWidgets.QSpacerItem(400, 220, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.list_for_searchname.addSpacerItem(spacer)
+
+        scroll.setWidget(self.list_for_searchnameContainer)
+        vbox.addWidget(scroll)
+        vbox.setStretchFactor(scroll, 8)
+
         plane.addLayout(vbox)
         plane.setStretchFactor(vbox, 6)
         plane.addStretch(1)
@@ -278,30 +368,67 @@ class Ui_Dialog3(QtWidgets.QWidget):
         if name=="":
             self.SearchfriendInput.setStyleSheet("border: 1px solid #ff5b5b; border-radius:4px focus{\nborder:1px solid #549df8;}\n")
             self.prompt(self.SearchfriendInput)
+            self.clearLayout(0)
+            self.clearSignal.emit(0)
         else:
             header = serial_header_pack(MessageType.query_friend, [name])
             self.sock.conn.send(header)
-            if self.handler_for_online not in callback_func:
-                add_listener(self.handler_for_online)
 
     def handler_for_online(self, itype, header):
         if itype == MessageType.friend_found:
             self.friend_found(header)
         elif itype == MessageType.friend_not_found:
             self.friend_not_found(header)
+        elif itype == MessageType.add_friend_successful:
+            self.add_friend_successful(header)
+        elif itype == MessageType.friend_request_rejected:
+            self.friend_request_rejected(header)
+
+    def clearLayout(self, num):
+        if num == 0:
+            layout = self.list_for_searchname
+        i = layout.count()
+        while i > 1:
+            toRemove = layout.itemAt(i - 2).widget()
+            # remove it from the layout list
+            layout.removeWidget(toRemove)
+            # remove it from the gui
+            toRemove.setParent(None)
+            i -= 1
+
+    def show_list(self, num):
+        self.clearSignal.emit(0)
+        if num == 0:
+            layout = self.list_for_searchname
+        global toclick
+        toclick.clear()
+        for i in range(len(friendList)):
+            Box = QtWidgets.QWidget()
+            Username = QtWidgets.QLabel()
+            Username.setFixedHeight(80)
+            Username.setText(friendList[i]['Nickname'] + '(' + friendList[i]['Username'] + ')')
+            Username.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+            Username.installEventFilter(self)
+            layout.insertWidget(layout.count() - 1, Username)
+            toclick.append(Username)
+
+    def add_friend_successful(self, parameters):
+        pass
+
+    def friend_request_rejected(self, parameters):
+        pass
 
     def friend_found(self, parameters):
         print('friend_found')
-        friend = serial_data_unpack(self.sock)[0]
-        print(friend)
-        if self.handler_for_online in callback_func:
-            callback_func.remove(self.handler_for_online)
+        global friendList
+        if len(friendList) != 0:
+            friendList.clear()
+        friendList = serial_data_unpack(self.sock)        
+        self.show_listSignal.emit(0)
 
     def friend_not_found(self, parameters):
         print('friend_not_found')
         self.prompt(self.SearchfriendInput, 1)
-        if self.handler_for_online in callback_func:
-            callback_func.remove(self.handler_for_online)
 
     def switchtoChat(self, event):
         print("In chat")
@@ -323,6 +450,9 @@ class Ui_Dialog3(QtWidgets.QWidget):
 
     def Info(self, data):
         self.name.setText(data['Nickname'])
+        self.selfInformation['ID'] = data['ID']
+        self.selfInformation['Username'] = data['Username']
+        self.selfInformation['Nickname'] = data['Nickname']
 
 
 class Dialog3(Ui_Dialog3):
