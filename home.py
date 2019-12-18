@@ -1,34 +1,24 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from login import block
 from event_handler import *
+from handler_for_homepage import *
+import threading
 
 friendList = []
 toclick = []
-
-def setupIcon(Icon, url, size):
-    jpg = QtGui.QPixmap(url)
-    Icon.resize(size[0], size[1])
-    Icon.setPixmap(jpg.scaled(Icon.size(), aspectRatioMode= QtCore.Qt.KeepAspectRatio))
-
-def Ray(object, num): # 0: blue 1: red
-    layout = object.parentWidget()
-    prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
-    error = layout.findChild(QtWidgets.QLabel, "Icon")
-    if num == 0:
-        object.setStyleSheet("border:1px solid #549df8; border-radius:4px;}")
-        prompt.setVisible(False)
-        error.setVisible(False)
-    elif num == 1:
-        prompt.setVisible(True)
-        error.setVisible(True)
-        object.setStyleSheet("border:1px solid #ff5b5b; border-radius:4px;\n")
+sender_lock = threading.Lock()
+talker1_lock = threading.Lock()
 
 class Ui_Dialog3(QtWidgets.QWidget):
     clearSignal = QtCore.pyqtSignal(int)
     show_listSignal = QtCore.pyqtSignal(int)
+    talk_Signal = QtCore.pyqtSignal(int)
     selfInformation = {}
     tosend = -1
     myfriend = []
+    sender = None
+    talker1 = None
+    talker2 = None
     def setupUi(self, Dialog, sock):
         Dialog.setObjectName("MainDialog")
         Dialog.setFixedSize(1330, 980)
@@ -46,7 +36,8 @@ class Ui_Dialog3(QtWidgets.QWidget):
         panel = QtWidgets.QHBoxLayout(Dialog)
         panel.setContentsMargins(0, 0, 0, 0)
         panel.setSpacing(0)
-
+        self.talk_Signal.connect(self.talktofriend1)
+        
         self.sidebarContainer = QtWidgets.QWidget()
         self.sidebar = QtWidgets.QVBoxLayout(self.sidebarContainer)
         self.sidebar.setContentsMargins(15, 10, 0, 0)
@@ -164,6 +155,11 @@ class Ui_Dialog3(QtWidgets.QWidget):
                 self.tosend = toclick.index(object)
                 self.friendImage(event)
 
+        elif event.type() == QtCore.QEvent.Close:
+            if object == self.request:
+                global sender_lock
+                sender_lock.release()
+
         elif event.type() == QtCore.QEvent.FocusIn:
             Ray(object, 0)
             prompt = object.parentWidget().findChild(QtWidgets.QLabel, "Prompt")
@@ -185,7 +181,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
 
     def friendImage(self, event):
         self.image = QtWidgets.QDialog()
-        self.image.setFixedSize(300, 300)
+        self.image.setFixedSize(400, 400)
         self.image.setStyleSheet("background-color:rgb(255, 255, 255);")
         panel = QtWidgets.QVBoxLayout(self.image)
         
@@ -194,7 +190,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
         
         selfie = QtWidgets.QLabel()
         selfie.setAlignment(QtCore.Qt.AlignCenter)
-        setupIcon(selfie, 'Pic/Selfie-init.png', [200, 200])
+        setupIcon(selfie, 'Pic/Selfie-init.png', [250, 250])
         selfie.setObjectName('selfie')
         panel.addWidget(selfie)
         panel.setStretchFactor(selfie, 6)
@@ -302,16 +298,16 @@ class Ui_Dialog3(QtWidgets.QWidget):
         self.searchFriend.setFixedSize(850, 400)
         self.searchFriend.setStyleSheet("background-color:rgb(255, 255, 255);")
 
-        plane = QtWidgets.QHBoxLayout(self.searchFriend)
-        plane.setContentsMargins(0, 0, 0, 0)
+        panel = QtWidgets.QHBoxLayout(self.searchFriend)
+        panel.setContentsMargins(0, 0, 0, 0)
 
         background = QtWidgets.QLabel()
         jpg = QtGui.QPixmap('Pic/searchFriend.jpg')
         background.resize(400, 400)
         background.setPixmap(jpg.scaled(background.size(), aspectRatioMode= QtCore.Qt.KeepAspectRatio))
         background.setObjectName("Background")
-        plane.addWidget(background)
-        plane.addStretch(1)
+        panel.addWidget(background)
+        panel.addStretch(1)
 
         vbox = QtWidgets.QVBoxLayout()
         vbox.setSpacing(0)
@@ -358,9 +354,9 @@ class Ui_Dialog3(QtWidgets.QWidget):
         vbox.addWidget(scroll)
         vbox.setStretchFactor(scroll, 8)
 
-        plane.addLayout(vbox)
-        plane.setStretchFactor(vbox, 6)
-        plane.addStretch(1)
+        panel.addLayout(vbox)
+        panel.setStretchFactor(vbox, 6)
+        panel.addStretch(1)
         self.searchFriend.show()
         self.msgbox.close()    
 
@@ -375,6 +371,89 @@ class Ui_Dialog3(QtWidgets.QWidget):
             header = serial_header_pack(MessageType.query_friend, [name])
             self.sock.conn.send(header)
 
+    def agree_request(self):
+        c = database.get_cursor()
+        c.execute('update Friends set Accepted=1, Resolved=1 where Request_User_ID=? and Receive_User_ID=? and Accepted=0 and Resolved=0', [self.sender['ID'], self.selfInformation['ID']])
+        header = serial_header_pack(MessageType.add_friend_successful_server, [self.sender, self.selfInformation])
+        self.sock.conn.send(header)
+
+    def disagree_request(self):
+        c = database.get_cursor()
+        c.execute('update Friends set Accepted=0, Resolved=1 where Request_User_ID=? and Receive_User_ID=? and Accepted=0 and Resolved=0', [self.sender['ID'], self.selfInformation['ID']])
+
+    def resolve_friend_request(self, parameters):
+        global sender_lock
+        sender_lock.acquire()
+        print(parameters)
+        
+        parameters = parameters['Sender']
+        self.sender = parameters
+        self.request = QtWidgets.QDialog()
+        self.request.setFixedSize(400, 400)
+        self.request.setStyleSheet("background-color:rgb(255, 255, 255);")
+        panel = QtWidgets.QVBoxLayout(self.request)
+        
+        panel.setContentsMargins(20, 0, 20, 0)
+        panel.setSpacing(0)
+        
+        selfie = QtWidgets.QLabel()
+        selfie.setAlignment(QtCore.Qt.AlignCenter)
+        setupIcon(selfie, 'Pic/Selfie-init.png', [250, 250])
+        selfie.setObjectName('selfie')
+        panel.addWidget(selfie)
+        panel.setStretchFactor(selfie, 6)
+
+        name = QtWidgets.QLabel()
+        name.resize(200, 45)
+        name.setText(parameters["Nickname"] + "(" + parameters["Username"] + ")")
+        name.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        name.setAlignment(QtCore.Qt.AlignCenter)
+        panel.addWidget(name)
+        panel.setStretchFactor(name, 2)
+        panel.addStretch(1)
+
+        words = QtWidgets.QLabel()
+        words.setText("wants to make friends with you")
+        words.setWordWrap(True)
+        words.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        words.setAlignment(QtCore.Qt.AlignCenter)
+        panel.addWidget(words)
+        panel.setStretchFactor(words, 2)
+        panel.addStretch(1)
+
+        line = QtWidgets.QHBoxLayout()
+        line.addStretch(1)
+        button1 = QtWidgets.QPushButton()
+        button1.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        button1.setText("Agree")
+        button1.setStyleSheet("background-color:#3487ff;background-image: qlineargradient(0deg,#398bff,#3083ff); color:rgb(255,255,255);")
+        button1.clicked.connect(self.agree_request)
+        line.addWidget(button1)
+        line.setStretchFactor(button1, 3)
+        line.addStretch(1)
+        button1.setObjectName("Button1")
+
+        button2 = QtWidgets.QPushButton()
+        button2.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        button2.setText("Disagree")
+        button2.setStyleSheet("background-color:#3487ff;background-image: qlineargradient(0deg,#398bff,#3083ff); color:rgb(255,255,255);")
+        button2.clicked.connect(self.disagree_request)
+        line.addWidget(button2)
+        line.setStretchFactor(button2, 3)
+        line.addStretch(1)
+        button2.setObjectName("Button2")
+        panel.addLayout(line)
+
+        setblock = block()
+        box = QtWidgets.QWidget()
+        setblock.setupblock(box, "Finished", "Response has been sent successfully", False, False)
+        panel.addWidget(box)
+        panel.setStretchFactor(box, 2)
+        panel.addStretch(1)
+        self.request.installEventFilter(self)
+
+        self.request.show()
+
     def handler_for_online(self, itype, header):
         if itype == MessageType.friend_found:
             self.friend_found(header)
@@ -384,6 +463,8 @@ class Ui_Dialog3(QtWidgets.QWidget):
             self.add_friend_successful(header)
         elif itype == MessageType.friend_request_rejected:
             self.friend_request_rejected(header)
+        elif itype == MessageType.resolve_friend_request:
+            self.resolve_friend_request(header)
 
     def clearLayout(self, num):
         if num == 0:
@@ -414,6 +495,60 @@ class Ui_Dialog3(QtWidgets.QWidget):
             toclick.append(Username)
 
     def add_friend_successful(self, parameters):
+        print(parameters)
+        parameters = parameters['Receiver']
+        self.image = QtWidgets.QDialog()
+        self.image.setFixedSize(400, 400)
+        self.image.setStyleSheet("background-color:rgb(255, 255, 255);")
+        panel = QtWidgets.QVBoxLayout(self.image)
+        self.myfriend.append(parameters)
+        global talker1_lock
+        talker1_lock.acquire()
+        self.talker1 = parameters
+        
+        panel.setContentsMargins(20, 0, 20, 0)
+        panel.setSpacing(0)
+        
+        selfie = QtWidgets.QLabel()
+        selfie.setAlignment(QtCore.Qt.AlignCenter)
+        setupIcon(selfie, 'Pic/Selfie-init.png', [250, 250])
+        selfie.setObjectName('selfie')
+        panel.addWidget(selfie)
+        panel.setStretchFactor(selfie, 6)
+
+        name = QtWidgets.QLabel()
+        name.resize(200, 45)
+        name.setText(parameters["Nickname"] + "(" + parameters["Username"] + ")")
+        name.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        name.setAlignment(QtCore.Qt.AlignCenter)
+        panel.addWidget(name)
+        panel.setStretchFactor(name, 2)
+        panel.addStretch(1)
+
+        words = QtWidgets.QLabel()
+        words.setText("Has agreed your request")
+        words.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        words.setAlignment(QtCore.Qt.AlignCenter)
+        panel.addWidget(words)
+        panel.setStretchFactor(words, 2)
+        panel.addStretch(1)
+
+        line = QtWidgets.QHBoxLayout()
+        line.addStretch(1)
+        button = QtWidgets.QPushButton()
+        button.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        button.setText("Say hello to him")
+        button.setStyleSheet("background-color:#3487ff;background-image: qlineargradient(0deg,#398bff,#3083ff); color:rgb(255,255,255);")
+        button.clicked.connect(self.talktofriend1)
+        line.addWidget(button)
+        line.setStretchFactor(button, 3)
+        line.addStretch(1)
+        button.setObjectName("Button")
+        panel.addLayout(line)
+
+        self.image.show()
+
+    def talktofriend1(self):
         pass
 
     def friend_request_rejected(self, parameters):
@@ -455,9 +590,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
         self.selfInformation['Username'] = data['Username']
         self.selfInformation['Nickname'] = data['Nickname']
 
-
 class Dialog3(Ui_Dialog3):
     def __init__(self, sock, parent=None):
         super(Dialog3, self).__init__(parent)
         self.setupUi(self, sock)
-

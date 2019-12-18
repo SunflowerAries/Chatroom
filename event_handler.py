@@ -51,12 +51,15 @@ def login(sock, parameters):
     # 发送好友请求
     # TODO: serial_header_pack have to deal with [[]]
     friend_list = database.get_pending_friend_request(user['ID'])
+    print('friend_list:', friend_list)
     for friend in friend_list:
-        iheader = serial_header_pack(MessageType.add_friend, friend)
+        # if friend:
+        iheader = serial_header_pack(MessageType.resolve_friend_request, [friend])
         sock.conn.send(iheader)
     
     # 通知好友自己上线
     friend_list = database.get_friends(user['ID'])
+    print(friend_list)
     related['Friend'] = friend_list
     for friend in friend_list:
         if friend['ID'] in database.user_id_to_host:
@@ -111,15 +114,16 @@ def add_friend(sock, parameters):
     print(parameters)
     receiver = parameters['Receiver']
     sender = parameters['Sender']
-    sender_sock = database.user_id_to_host[sender['ID']]
     # parameters = username
     c = database.get_cursor()
-    c.execute('insert into friends (from_user_id,to_user_id,accepted) values (?,?,0)', [user_id, uid]).fetchall()
+    r = c.execute('select * from Friends where Request_User_ID=? and Receive_User_ID=? and Accepted=0', [sender['ID'], receiver['ID']]).fetchall()
+    if len(r) > 0:
+        c.execute('update Friends set Resolved=0 where Request_User_ID=? and Receive_User_ID=?', [sender['ID'], receiver['ID']])
+    else:
+        c.execute('insert into Friends (Request_User_ID,Receive_User_ID,Accepted,Resolved) values (?,?,0,0)', [sender['ID'], receiver['ID']])
     if receiver['ID'] in database.user_id_to_host:
-        database.user_id_to_host[receiver['ID']].send(MessageType.resolve_friend_request, [sender])
-
-def resolve_friend_request(sock, parameters):
-    print('in resolve_friend_request')
+        header = serial_header_pack(MessageType.resolve_friend_request, [sender])
+        database.user_id_to_host[receiver['ID']].conn.send(header)
 
 def send_message(sock, parameters):
     print('in send_message')
@@ -157,11 +161,19 @@ def query_friend(sock, parameters):
         header = serial_header_pack(MessageType.friend_not_found)
         sock.conn.send(header)
 
+def add_friend_successful_server(sock, parameters):
+    print('in add_friend_successful_server')
+    print(parameters)
+    receiver = parameters['Receiver']
+    sender = parameters['Sender']
+    if sender['ID'] in database.user_id_to_host:
+        header = serial_header_pack(MessageType.add_friend_successful, [receiver])
+        database.user_id_to_host[sender['ID']].conn.send(header)
+
 event_hander_map = {
     MessageType.login: login,
     MessageType.register: register,
     MessageType.add_friend: add_friend,
-    MessageType.resolve_friend_request: resolve_friend_request,
     MessageType.send_message: send_message,
     MessageType.join_room: join_room,
     MessageType.create_room: create_room,
@@ -170,6 +182,7 @@ event_hander_map = {
     MessageType.other_host_login: other_host_login,
     MessageType.friend_online: friend_online,
     MessageType.room_mem_online: room_mem_online,
+    MessageType.add_friend_successful_server: add_friend_successful_server,
 }
 
 def handler(sock, itype, parameters):

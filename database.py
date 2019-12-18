@@ -12,9 +12,9 @@ def commit():
 def get_user(user_id):
     c = get_cursor()
     fields = ['ID', 'Username', 'Nickname']
-    row = c.execute('SELECT ' + ','.join(fields) + ' from Users where Username=?', [user_id]).fetchall()
+    row = c.execute('SELECT ' + ','.join(fields) + ' from Users where ID=?', [user_id]).fetchall()
     if len(row) == 0:
-        return None
+        return
     else:
         user = dict(zip(fields, row[0]))
         user['online'] = user_id in user_id_to_host
@@ -25,7 +25,7 @@ def kickout_host(host):
 
 def get_pending_friend_request(user_id):
     c = get_cursor()
-    rows = c.execute('SELECT Request_User_ID FROM Friends WHERE Receive_User_ID=? AND NOT Accepted', [user_id]).fetchall()
+    rows = c.execute('SELECT Request_User_ID FROM Friends WHERE Receive_User_ID=? AND NOT Resolved', [user_id]).fetchall()
     return list(map(lambda x: get_user(x[0]), rows))
 
 def get_friends(user_id):
@@ -51,7 +51,7 @@ def get_room(room_id):
     fields = ['ID', 'Room_Name']
     row = c.execute('SELECT ' + ','.join(fields) + ' FROM Rooms WHERE ID=?', [room_id]).fetchall()
     if len(row) == 0:
-        return None
+        return
     else:
         room = dict(zip(fields, row[0]))
         return room

@@ -3,9 +3,10 @@ import struct, time
 type_mapping = {
     'int': 1,
     'str': 2,
-    'dict': 3,
-    'list': 4,
-    'none': 5,
+    'bool': 3,
+    'dict': 4,
+    'list': 5,
+    'none': 6,
 }
 # type + lengthof(str) + str
 def pack_str(topack):
@@ -15,6 +16,9 @@ def pack_str(topack):
 # type + int
 def pack_int(topack):
     return bytes([type_mapping['int']]) + struct.pack('!I', topack)
+
+def pack_bool(topack):
+    return bytes([type_mapping['bool']]) + struct.pack('!?', topack)
 
 # type + lenthof(dict)
 # - items
@@ -43,6 +47,7 @@ def pack_list(topack):
 pack_map = {
     'str': pack_str,
     'int': pack_int,
+    'bool': pack_bool,
     'dict': pack_dict,
     'list': pack_list,
 }
@@ -84,6 +89,9 @@ def unpack_str(host):
 def unpack_int(host):
     return struct.unpack('!I', host.conn.recv(4))[0]
 
+def unpack_bool(host):
+    return struct.unpack('!?', host.conn.recv(1))[0]
+
 def unpack_dict(host):
     body = {}
     cnt = struct.unpack('!B', host.conn.recv(1))[0]
@@ -104,6 +112,7 @@ def unpack_list(host):
 unpack_map = {
     'str': unpack_str,
     'int': unpack_int,
+    'bool': unpack_bool,
     'dict': unpack_dict,
     'list': unpack_list,
 }

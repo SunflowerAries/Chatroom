@@ -188,6 +188,8 @@ class Ui_Dialog2(QtWidgets.QDialog):
         self.clearField()
         if self.handler_for_login_logup in callback_func:
             callback_func.remove(self.handler_for_login_logup)
+        if Dialogs[2].handler_for_online not in callback_func:
+            add_listener(Dialogs[2].handler_for_online)
         Dialogs[2].Info(parameters)
         Dialogs[2].show()
         self.close()

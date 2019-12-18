@@ -24,10 +24,10 @@ class MessageType(enum.IntEnum):
 
     friend_online = 200
     friend_offline = 201
-
     room_mem_online = 202
     room_mem_offline = 203
     other_host_login = 204
+    add_friend_successful_server = 205
     
     
 
@@ -153,11 +153,33 @@ def add_friend_parsing(parameters):
     print(header)
     return header
 
+def resolve_friend_request_parsing(parameters):
+    print('resolve_friend_request_parsing')
+    header = {}
+    header['Date'] = parameters[0]
+    header['Sender'] = parameters[1]
+    return header
+
+def add_friend_successful_parsing(parameters):
+    print('add_friend_successful_parsing')
+    header = {}
+    header['Date'] = parameters[0]
+    header['Receiver'] = parameters[1]
+    return header
+
+def add_friend_successful_server_parsing(parameters):
+    print('add_friend_successful_server_parsing')
+    header = {}
+    header['Date'] = parameters[0]
+    header['Sender'] = parameters[1]
+    header['Receiver'] = parameters[2]
+    return header
+
 header_parsing = {
     MessageType.login: login_parsing,
     MessageType.register: register_parsing,
     MessageType.add_friend: add_friend_parsing,
-    # MessageType.resolve_friend_request: resolve_friend_request,
+    MessageType.resolve_friend_request: resolve_friend_request_parsing,
     MessageType.send_message: message_parsing,
     # MessageType.join_room: join_room,
     # MessageType.create_room: create_room,
@@ -173,6 +195,8 @@ header_parsing = {
     MessageType.room_mem_online: room_mem_online_parsing,
     MessageType.friend_found: friend_found_parsing,
     MessageType.friend_not_found: friend_not_found_parsing,
+    MessageType.add_friend_successful_server: add_friend_successful_server_parsing,
+    MessageType.add_friend_successful: add_friend_successful_parsing,
 }
 
 def convert(itype, host):
