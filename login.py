@@ -4,45 +4,41 @@ from event_handler import *
 from listen import Dialogs
 
 class block(QtWidgets.QWidget):
-    def setupblock(self, QWidget, name, suffix=None, sign=None):
+    def setupblock(self, QWidget, name, words=None, toinput=True, error=True):
         self.box = QtWidgets.QVBoxLayout(QWidget)
         self.box.setContentsMargins(0, 0, 0, 0)
         self.box.setSpacing(0)
-        if sign == None:
+        if toinput == True:
             self.toInput = QtWidgets.QLineEdit()
-            # self.toInput = MyLineEdit()
             self.toInput.setPlaceholderText(name)
             self.toInput.setFont(QtGui.QFont(QtGui.QFont("Times", 24, QtGui.QFont.Bold)))
             self.toInput.setObjectName(name)
             self.toInput.setStyleSheet("background-color:rgba(255, 0, 0, 0); border: 1px solid #aaa; border-radius:4px;")
             self.box.addWidget(self.toInput)
             self.box.setStretchFactor(self.toInput, 5)
-        self.prompt(name, suffix)
+        self.prompt(words, error)
         self.box.addLayout(self.hbox)
 
-    def prompt(self, reason, suffix=None):
+    def prompt(self, reason, error=True):
         self.hbox = QtWidgets.QHBoxLayout()
         self.hbox.setContentsMargins(0, 5, 0, 0)
         self.hbox.setSpacing(0)
-        error = QtWidgets.QLabel()
+        icon = QtWidgets.QLabel()
         prompt = QtWidgets.QLabel()
-        if suffix != None:
-            jpg2 = QtGui.QPixmap("Pic/Finished.png")
-            prompt.setStyleSheet("color: #91ED61;")
-            prompt.setText(suffix)
-        else:
+        if error:
             jpg2 = QtGui.QPixmap("Pic/error.png")
             prompt.setStyleSheet("color: #ff5b5b;")
-            if reason.startswith("Re"):
-                prompt.setText("Two passwords should be consistent")
-            else:
-                prompt.setText(reason + " cannot be empty")
-        error.resize(18, 18)
-        error.setPixmap(jpg2.scaled(error.size(), aspectRatioMode= QtCore.Qt.KeepAspectRatio))
-        error.setObjectName("Error")
-        error.setVisible(False)
-        self.hbox.addWidget(error)
-        self.hbox.setStretchFactor(error, 1)
+        else:
+            jpg2 = QtGui.QPixmap("Pic/Finished.png")
+            prompt.setStyleSheet("color: #91ED61;")
+        
+        prompt.setText(reason)
+        icon.resize(18, 18)
+        icon.setPixmap(jpg2.scaled(icon.size(), aspectRatioMode= QtCore.Qt.KeepAspectRatio))
+        icon.setObjectName("Icon")
+        icon.setVisible(False)
+        self.hbox.addWidget(icon)
+        self.hbox.setStretchFactor(icon, 1)
 
         prompt.resize(200, 50)
         
@@ -59,6 +55,8 @@ class Ui_Dialog2(QtWidgets.QDialog):
         Dialog.setFixedSize(1200, 720)
         Dialog.setStyleSheet("QDialog{\n"
         "background-color:rgb(255, 255, 255);}\n}"
+"QLineEdit{\n"
+"background-color:rgba(255, 0, 0, 0); border: 2px solid #aaa; border-radius:4px}\n"
 "\n"
 "QLabel{\n"
 "color:#ff5b5b;}"
@@ -93,21 +91,21 @@ class Ui_Dialog2(QtWidgets.QDialog):
         setblock = block()
 
         self.Username = QtWidgets.QWidget()
-        setblock.setupblock(self.Username, "Username")
+        setblock.setupblock(self.Username, "Username", "Username cannot be empty", True)
         self.UsernameInput = self.Username.findChild(QtWidgets.QLineEdit, "Username")
         self.UsernameInput.installEventFilter(self)
         vbox.addWidget(self.Username)
         vbox.addStretch(1)
 
         self.Nickname = QtWidgets.QWidget()
-        setblock.setupblock(self.Nickname, "Nickname")
+        setblock.setupblock(self.Nickname, "Nickname", "Nickname cannot be empty", True)
         self.NicknameInput = self.Nickname.findChild(QtWidgets.QLineEdit, "Nickname")
         self.NicknameInput.installEventFilter(self)
         vbox.addWidget(self.Nickname)
         vbox.addStretch(1)
 
         self.Password = QtWidgets.QWidget()
-        setblock.setupblock(self.Password, "Password")
+        setblock.setupblock(self.Password, "Password", "Password cannot be empty", True)
         self.PasswordInput = self.Password.findChild(QtWidgets.QLineEdit, "Password")
         self.PasswordInput.setEchoMode(QtWidgets.QLineEdit.Password)
         self.PasswordInput.installEventFilter(self)
@@ -115,7 +113,7 @@ class Ui_Dialog2(QtWidgets.QDialog):
         vbox.addStretch(1)
 
         self.Password2 = QtWidgets.QWidget()
-        setblock.setupblock(self.Password2, "Re-enter password")
+        setblock.setupblock(self.Password2, "Re-enter password", "Two passwords should be consistent", True)
         self.PasswordInput2 = self.Password2.findChild(QtWidgets.QLineEdit, "Re-enter password")
         self.PasswordInput2.setEchoMode(QtWidgets.QLineEdit.Password)
         self.PasswordInput2.installEventFilter(self)
@@ -154,7 +152,7 @@ class Ui_Dialog2(QtWidgets.QDialog):
     def eventFilter(self, object, event):        
         layout = object.parentWidget()
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
-        error = layout.findChild(QtWidgets.QLabel, "Error")
+        error = layout.findChild(QtWidgets.QLabel, "Icon")
         if event.type() == QtCore.QEvent.FocusIn:
             object.setStyleSheet("border:1px solid #549df8; border-radius:4px;}")
             prompt.setVisible(False)
@@ -241,7 +239,7 @@ class Ui_Dialog2(QtWidgets.QDialog):
     def prompt(self, object, choice=0):
         layout = object.parentWidget()
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
-        error = layout.findChild(QtWidgets.QLabel, "Error")
+        error = layout.findChild(QtWidgets.QLabel, "Icon")
         if choice == 1 and object == self.UsernameInput:
             prompt.setText("This username has been taken")
         object.setStyleSheet("border: 1px solid #ff5b5b; focus{\nborder:1px solid #549df8;}\n")
@@ -252,7 +250,7 @@ class Ui_Dialog2(QtWidgets.QDialog):
         object.setText(None)
         layout = object.parentWidget()
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
-        error = layout.findChild(QtWidgets.QLabel, "Error")
+        error = layout.findChild(QtWidgets.QLabel, "Icon")
         object.setStyleSheet("border: 1px solid #aaa; focus{\nborder:1px solid #549df8;}\n")
         prompt.setVisible(False)
         error.setVisible(False)
@@ -310,14 +308,14 @@ class Ui_Dialog(QtWidgets.QDialog):
         setblock = block()
 
         self.Username = QtWidgets.QWidget()
-        setblock.setupblock(self.Username, "Username")
+        setblock.setupblock(self.Username, "Username", "Username cannot be empty", True)
         self.UsernameInput = self.Username.findChild(QtWidgets.QLineEdit, "Username")
         self.UsernameInput.installEventFilter(self)
         vbox.addWidget(self.Username)
         vbox.addStretch(1)
 
         self.Password = QtWidgets.QWidget()
-        setblock.setupblock(self.Password, "Password")
+        setblock.setupblock(self.Password, "Password", "Password cannot be empty", True)
         self.PasswordInput = self.Password.findChild(QtWidgets.QLineEdit, "Password")
         self.PasswordInput.setEchoMode(QtWidgets.QLineEdit.Password)
         self.PasswordInput.installEventFilter(self)
@@ -388,7 +386,7 @@ class Ui_Dialog(QtWidgets.QDialog):
     def eventFilter(self, object, event):        
         layout = object.parentWidget()
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
-        error = layout.findChild(QtWidgets.QLabel, "Error")
+        error = layout.findChild(QtWidgets.QLabel, "Icon")
         if event.type() == QtCore.QEvent.FocusIn:
             object.setStyleSheet("border:1px solid #549df8; border-radius:4px;}")
             prompt.setVisible(False)
@@ -396,8 +394,7 @@ class Ui_Dialog(QtWidgets.QDialog):
             if object == self.UsernameInput:
                 prompt.setText("Username cannot be empty")
             elif object == self.PasswordInput:
-                prompt.setText("Password cannot be empty")
-            
+                prompt.setText("Password cannot be empty")    
 
         elif event.type() == QtCore.QEvent.FocusOut:
             text = object.text()
@@ -441,7 +438,7 @@ class Ui_Dialog(QtWidgets.QDialog):
     def prompt(self, object, choice=0):
         layout = object.parentWidget()
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
-        error = layout.findChild(QtWidgets.QLabel, "Error")
+        error = layout.findChild(QtWidgets.QLabel, "Icon")
         object.setStyleSheet("border: 1px solid #ff5b5b; focus{\nborder:1px solid #549df8;}\n")
         if choice == 1:
             if object == self.UsernameInput:
@@ -455,7 +452,7 @@ class Ui_Dialog(QtWidgets.QDialog):
         object.setText(None)
         layout = object.parentWidget()
         prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
-        error = layout.findChild(QtWidgets.QLabel, "Error")
+        error = layout.findChild(QtWidgets.QLabel, "Icon")
         object.setStyleSheet("border: 1px solid #aaa; focus{\nborder:1px solid #549df8;}\n")
         prompt.setVisible(False)
         error.setVisible(False)

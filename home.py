@@ -13,7 +13,7 @@ def setupIcon(Icon, url, size):
 def Ray(object, num): # 0: blue 1: red
     layout = object.parentWidget()
     prompt = layout.findChild(QtWidgets.QLabel, "Prompt")
-    error = layout.findChild(QtWidgets.QLabel, "Error")
+    error = layout.findChild(QtWidgets.QLabel, "Icon")
     if num == 0:
         object.setStyleSheet("border:1px solid #549df8; border-radius:4px;}")
         prompt.setVisible(False)
@@ -186,6 +186,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
     def friendImage(self, event):
         self.image = QtWidgets.QDialog()
         self.image.setFixedSize(300, 300)
+        self.image.setStyleSheet("background-color:rgb(255, 255, 255);")
         panel = QtWidgets.QVBoxLayout(self.image)
         
         panel.setContentsMargins(20, 0, 20, 0)
@@ -210,7 +211,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
         line = QtWidgets.QHBoxLayout()
         line.addStretch(1)
         button = QtWidgets.QPushButton()
-        button.setFont(QtGui.QFont(QtGui.QFont("Arial", 24)))
+        button.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
         button.setText("Add Him")
         button.setStyleSheet("background-color:#3487ff;background-image: qlineargradient(0deg,#398bff,#3083ff); color:rgb(255,255,255);")
         button.clicked.connect(self.sendRequest)
@@ -222,7 +223,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
 
         setblock = block()
         box = QtWidgets.QWidget()
-        setblock.setupblock(box, "Finished", "Request has been sent successfully", 0)
+        setblock.setupblock(box, "Finished", "Request has been sent successfully", False, False)
         panel.addWidget(box)
         panel.setStretchFactor(box, 2)
         panel.addStretch(1)
@@ -232,7 +233,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
     def sendRequest(self):
         if self.tosend != -1:
             prompt = self.image.findChild(QtWidgets.QLabel, "Prompt")
-            error = self.image.findChild(QtWidgets.QLabel, "Error")
+            error = self.image.findChild(QtWidgets.QLabel, "Icon")
             if friendList[self.tosend]["ID"] == self.selfInformation["ID"]:
                 prompt.setText("Sorry, but you're adding yourself")
                 prompt.setStyleSheet("color: #ff5b5b;")
@@ -318,7 +319,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
 
         setblock = block()
         self.Searchfriend = QtWidgets.QWidget()
-        setblock.setupblock(self.Searchfriend, "Name")
+        setblock.setupblock(self.Searchfriend, "Name", "Username/Nickname cannot be empty", True)
         self.SearchfriendInput = self.Searchfriend.findChild(QtWidgets.QLineEdit, 'Name')
         self.SearchfriendInput.setPlaceholderText("Username/Nickname")
         self.SearchfriendInput.installEventFilter(self)
