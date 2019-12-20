@@ -4,7 +4,7 @@ from event_handler import *
 from listen import Dialogs
 
 class block(QtWidgets.QWidget):
-    def setupblock(self, QWidget, name, words=None, toinput=True, error=True):
+    def setupblock(self, QWidget, name, words=None, toinput=True, error=True, align=False):
         self.box = QtWidgets.QVBoxLayout(QWidget)
         self.box.setContentsMargins(0, 0, 0, 0)
         self.box.setSpacing(0)
@@ -16,12 +16,15 @@ class block(QtWidgets.QWidget):
             self.toInput.setStyleSheet("background-color:rgba(255, 0, 0, 0); border: 1px solid #aaa; border-radius:4px;")
             self.box.addWidget(self.toInput)
             self.box.setStretchFactor(self.toInput, 5)
-        self.prompt(words, error)
+        self.prompt(words, error, align)
         self.box.addLayout(self.hbox)
 
-    def prompt(self, reason, error=True):
+    def prompt(self, reason, error=True, align=False):
         self.hbox = QtWidgets.QHBoxLayout()
-        self.hbox.setContentsMargins(0, 5, 0, 0)
+        if align:
+            self.hbox.setContentsMargins(50, 5, 0, 0)
+        else:
+            self.hbox.setContentsMargins(0, 5, 0, 0)
         self.hbox.setSpacing(0)
         icon = QtWidgets.QLabel()
         prompt = QtWidgets.QLabel()
@@ -366,13 +369,15 @@ class Ui_Dialog(QtWidgets.QDialog):
         self.clearField()
         if self.handler_for_login_logup in callback_func:
             callback_func.remove(self.handler_for_login_logup)
-        data = serial_data_unpack(self.sock)
-
+        data = serial_data_unpack(self.sock)[0]
+        parameters['Friend'] = data['Friend']
+        parameters['Room'] = data['Room']
+        parameters['Message'] = data['Message']
+        print(parameters)
         if Dialogs[2].handler_for_online not in callback_func:
             add_listener(Dialogs[2].handler_for_online)
-        Dialogs[2].Info(parameters)
+        Dialogs[2].Info(parameters, True)
         Dialogs[2].show()
-        print(data)
         self.close()
 
     def user_not_exist(self, parameters):

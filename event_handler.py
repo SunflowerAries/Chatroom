@@ -48,24 +48,6 @@ def login(sock, parameters):
     related = {}
     room_list = database.get_user_room(user['ID'])
     related['Room'] = room_list
-    # 发送好友请求
-    # TODO: serial_header_pack have to deal with [[]]
-    friend_list = database.get_pending_friend_request(user['ID'])
-    print('friend_list:', friend_list)
-    for friend in friend_list:
-        # if friend:
-        iheader = serial_header_pack(MessageType.resolve_friend_request, [friend])
-        sock.conn.send(iheader)
-    
-    # 通知好友自己上线
-    friend_list = database.get_friends(user['ID'])
-    print(friend_list)
-    related['Friend'] = friend_list
-    for friend in friend_list:
-        if friend['ID'] in database.user_id_to_host:
-            iheader = serial_header_pack(MessageType.friend_online, [user['ID']])
-            database.user_id_to_host[friend['ID']].conn.send(iheader)
-    
     # 通知群成员自己上线
     for room in room_list:
         mems_id = database.get_room_members_id(room['ID'])
@@ -73,16 +55,32 @@ def login(sock, parameters):
             if mem_id in database.user_id_to_host and mem_id != user['ID']:
                 iheader = serial_header_pack(MessageType.room_mem_online, [room['ID'], user['ID']])
                 database.user_id_to_host[mem_id].conn.send(iheader)
-    
-    # TODO: login_successful need length field
-    
+
+    friend_list = database.get_friends(user['ID'])
+    print(friend_list)
+    # 通知好友自己上线
+    for friend in friend_list:
+        if friend['ID'] in database.user_id_to_host:
+            iheader = serial_header_pack(MessageType.friend_online, [user['ID']])
+            database.user_id_to_host[friend['ID']].conn.send(iheader)
+
+    sorted(friend_list, key=lambda x: x['Nickname'])
+    print('friend_list:', friend_list)
+    related['Friend'] = friend_list
     related['Message'] = database.get_chat_history(user['ID'])
     data = serial_data_pack([related])
-    print(data)
     tmp.append(len(data))
     header = serial_header_pack(MessageType.login_successful, tmp)
     sock.conn.send(header + data)
 
+    # 发送好友请求
+    # TODO: serial_header_pack have to deal with [[]]
+    friend_list = database.get_pending_friend_request(user['ID'])
+    for friend in friend_list:
+        # if friend:
+        iheader = serial_header_pack(MessageType.resolve_friend_request, [friend])
+        sock.conn.send(iheader)
+        
 def other_host_login(sock, parameters):
     print('other_host_login')
     print(parameters)
@@ -106,6 +104,7 @@ def register(sock, parameters):
         return
     c.execute('INSERT into Users (Username,Password,Nickname) values (?,?,?)',
               [parameters['Username'], parameters['Password'], parameters['Nickname']])
+    database.user_id_to_host[c.lastrowid] = sock
     header = serial_header_pack(MessageType.register_successful, [c.lastrowid, parameters['Username'], parameters['Nickname']])
     sock.conn.send(header)
 

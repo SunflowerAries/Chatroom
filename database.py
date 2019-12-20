@@ -38,7 +38,9 @@ def get_friends(user_id):
     rows = c.execute('SELECT Request_User_ID FROM Friends WHERE Receive_User_ID=? AND Accepted', [user_id]).fetchall()
     for row in rows:
         uid = row[0]
-        users.append(get_user(uid))
+        tmp = get_user(uid)
+        if tmp not in users:
+            users.append(tmp)
     return users
 
 def get_user_room(user_id):
