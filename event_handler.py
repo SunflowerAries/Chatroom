@@ -59,15 +59,17 @@ def login(sock, parameters):
     friend_list = database.get_friends(user['ID'])
     print(friend_list)
     # 通知好友自己上线
+    message = []
     for friend in friend_list:
         if friend['ID'] in database.user_id_to_host:
             iheader = serial_header_pack(MessageType.friend_online, [user['ID']])
             database.user_id_to_host[friend['ID']].conn.send(iheader)
+        message.append(database.get_chat_history(user['ID'], friend['ID']))
 
+    related['Message'] = message
     sorted(friend_list, key=lambda x: x['Nickname'])
     print('friend_list:', friend_list)
     related['Friend'] = friend_list
-    related['Message'] = database.get_chat_history(user['ID'])
     data = serial_data_pack([related])
     tmp.append(len(data))
     header = serial_header_pack(MessageType.login_successful, tmp)
@@ -126,6 +128,20 @@ def add_friend(sock, parameters):
 
 def send_message(sock, parameters):
     print('in send_message')
+    date = parameters['Date']
+    sender = parameters['Sender']
+    receiver = parameters['Receiver']
+    text = serial_data_unpack(sock)[0]
+    dialog = {}
+    dialog['Text'] = text
+    dialog['Date'] = date
+    if receiver['ID'] in database.user_id_to_host:
+        database.add_to_chat_history(sender['ID'], receiver['ID'], 0, text, date, 1)
+        header = serial_header_pack(MessageType.receive_message, [sender])
+        data = serial_data_pack([dialog])
+        database.user_id_to_host[receiver['ID']].conn.send(header + data)
+    else:
+        database.add_to_chat_history(sender['ID'], receiver['ID'], 0, text, date, 0)
 
 def join_room(sock, parameters):
     print('in join_room')

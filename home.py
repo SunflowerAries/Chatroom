@@ -9,6 +9,9 @@ toclick = []
 sender_lock = threading.Lock()
 talker_lock = threading.Lock()
 totalk = []
+toshow = []
+lastshow = -1
+lasttalk = -1
 
 class MyDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -27,9 +30,11 @@ class Ui_Dialog3(QtWidgets.QWidget):
     show_listSignal = QtCore.pyqtSignal(int)
     talk_Signal = QtCore.pyqtSignal(int)
     friend_Signal = QtCore.pyqtSignal(int, bool)
+    message_Signal = QtCore.pyqtSignal(int)
     selfInformation = {}
     tosend = -1
     myfriend = []
+    mymessage = []
     sender = None
     talker = None
     talker2 = None
@@ -46,6 +51,8 @@ class Ui_Dialog3(QtWidgets.QWidget):
 "padding-top: 10px; padding-right: 0px; padding-bottom: 10px; padding-left: 0px; \n" 
         "margin-top: 0px; margin-right: 19px; margin-bottom: 0px; margin-left: 19px; \n"
         "border-bottom: 1px solid #d6d6d6; background-color: #eee; color:rgb(0, 0, 0); border-radius: 0;}"
+"QLabel#Text{\n"
+"color:#000; }"
 "QPushButton{\n"
 "background-color:#3487ff;background-image: qlineargradient(0deg,#398bff,#3083ff); color:rgb(255,255,255);}\n"
 "QPushButton#SendButton{\n"
@@ -58,8 +65,10 @@ class Ui_Dialog3(QtWidgets.QWidget):
         panel.setSpacing(0)
         self.talk_Signal.connect(self.talktofriend1)
         self.friend_Signal.connect(self.showFriend)
+        self.message_Signal.connect(self.receive_message)
         
         self.sidebarContainer = QtWidgets.QWidget()
+        self.sidebarContainer.setFixedWidth(330)
         self.sidebarContainer.setStyleSheet("border-radius: 4px;")
         self.sidebar = QtWidgets.QVBoxLayout(self.sidebarContainer)
         self.sidebar.setContentsMargins(15, 10, 15, 0)
@@ -77,7 +86,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
         self.info.setStretchFactor(self.selfie, 2)
 
         self.name = QtWidgets.QLabel()
-        self.name.resize(200, 45)
+        self.name.resize(150, 45)
         self.name.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
         self.info.addWidget(self.name)
         self.info.setStretchFactor(self.name, 6)        
@@ -179,50 +188,6 @@ class Ui_Dialog3(QtWidgets.QWidget):
         self.sideDialog.addWidget(self.topbar)
         self.sideDialog.setStretchFactor(self.topbar, 1)
 
-        self.belowContainer = QtWidgets.QWidget()
-        self.below = QtWidgets.QVBoxLayout(self.belowContainer)
-
-        self.historyContainer = QtWidgets.QWidget()
-        self.history = QtWidgets.QVBoxLayout(self.historyContainer)
-        self.historyContainer.setStyleSheet("background-color: #eee;")
-        self.history.setSpacing(0)
-        self.history.setContentsMargins(0, 0, 0, 0)
-        scroll = QtWidgets.QScrollArea()
-        scroll.setStyleSheet("border:none;")
-        scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        scroll.setWidgetResizable(True)
-        scroll.setFixedHeight(620)
-        scroll.setWidget(self.historyContainer)
-        scroll.setObjectName("History")
-
-        self.below.addWidget(scroll)
-        self.below.setStretchFactor(scroll, 8)
-
-        self.msg = QtWidgets.QTextEdit()
-        self.msg.setStyleSheet("margin-right: 19px; border-top: 1px solid #d6d6d6; background-color: #eee;")
-        self.msg.setFixedHeight(200)
-        self.msg.setFont(QtGui.QFont(QtGui.QFont("Arial", 16)))
-        self.below.addWidget(self.msg)
-        self.below.setStretchFactor(self.msg, 2)
-
-        line = QtWidgets.QHBoxLayout()
-        line.addStretch(13)
-        self.sendButton = QtWidgets.QPushButton()
-        self.sendButton.setFixedWidth(160)
-        self.sendButton.setText("Send")
-        self.sendButton.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
-        self.sendButton.clicked.connect(self.send)
-        self.sendButton.setObjectName("SendButton")
-        line.addWidget(self.sendButton)
-        line.setStretchFactor(self.sendButton, 3)
-
-        self.below.addLayout(line)
-        self.below.setStretchFactor(line, 1)
-        self.sideDialog.addWidget(self.belowContainer)
-        self.sideDialog.setStretchFactor(self.belowContainer, 11)
-        self.belowContainer.setVisible(False)
-
         spacer = QtWidgets.QSpacerItem(1000, 980, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.sideDialog.addSpacerItem(spacer)
 
@@ -245,11 +210,12 @@ class Ui_Dialog3(QtWidgets.QWidget):
                 self.tosend = toclick.index(object)
                 self.friendImage(event)
             elif object in totalk:
-                for i in range(len(totalk)):
-                    totalk[i].setStyleSheet("background-color:#292c33;")
-                    
+                global lasttalk
+                if lasttalk != -1:
+                    totalk[lasttalk].setStyleSheet("background-color:#292c33;")
                 self.talker = object.property("ID")
                 self.talk_Signal.emit(self.talker)
+                lasttalk = self.talker
                 object.setStyleSheet("background-color:#3a3f45")
 
         elif event.type() == QtCore.QEvent.FocusIn:
@@ -272,13 +238,21 @@ class Ui_Dialog3(QtWidgets.QWidget):
         Dialog.setWindowTitle(_translate("Dialog", "Homepage"))
 
     def send(self):
-        text = self.msg.toPlainText()
+        box = toshow[self.talker]
+        msg = box.findChild(QtWidgets.QTextEdit, "MSG")
+        text = msg.toPlainText()
         print(text)
-        header = serial_header_pack(MessageType.send_message)
-        data = serial_data_unpack(text)
+        header = serial_header_pack(MessageType.send_message, [self.selfInformation, self.myfriend[self.talker]])
+        data = serial_data_pack([text])
         self.sock.conn.send(header + data)
-        self.msg.clear()
-
+        msg.clear()
+        history = {}
+        history['Sender'] = self.selfInformation['ID']
+        history['Receiver'] = self.myfriend[self.talker]['ID']
+        history['Text'] = text
+        history['Date'] = time.strftime("%a %b %d %H:%M:%S %Y", time.localtime())
+        self.mymessage[self.talker].append(history)
+        self.message_Signal.emit(self.talker)
 
     def friendImage(self, event):
         self.image = QtWidgets.QDialog()
@@ -441,14 +415,14 @@ class Ui_Dialog3(QtWidgets.QWidget):
         scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         scroll.setWidgetResizable(True)
-        scroll.setFixedHeight(220)
+        scroll.setFixedHeight(210)
 
         self.list_for_searchnameContainer = QtWidgets.QWidget()
         self.list_for_searchname = QtWidgets.QVBoxLayout()
         self.list_for_searchnameContainer.setLayout(self.list_for_searchname)
         self.list_for_searchname.setSpacing(0)
         self.list_for_searchname.setContentsMargins(0, 0, 0, 0)
-        spacer = QtWidgets.QSpacerItem(400, 220, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        spacer = QtWidgets.QSpacerItem(400, 210, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.list_for_searchname.addSpacerItem(spacer)
 
         scroll.setWidget(self.list_for_searchnameContainer)
@@ -479,6 +453,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
         self.sock.conn.send(header)
         if self.sender not in self.myfriend:
             self.myfriend.append(self.sender)
+            self.mymessage.append([])
         self.friend_Signal.emit(len(self.myfriend) - 1, False)
         self.request.close()
 
@@ -569,6 +544,106 @@ class Ui_Dialog3(QtWidgets.QWidget):
             self.add_friend_successful(header)
         elif itype == MessageType.resolve_friend_request:
             self.resolve_friend_request(header)
+        elif itype == MessageType.receive_message:
+            self.receive_message1(header)
+
+    def receive_message1(self, parameters):
+        history = {}
+        history['Sender'] = parameters['Sender']['ID']
+        text = serial_data_unpack(self.sock)[0]
+        history['Receiver'] = self.selfInformation['ID']
+        print(text)
+        if 'Date' in text.keys():
+            history['Date'] = text['Date']
+        else:
+            history['Date'] = parameters['Date']
+        history['Text'] = text['Text']
+        num = 0
+        for i in range(len(self.myfriend)):
+            if self.myfriend[i]['ID'] == history['Sender']:
+                num = i
+                history['Name'] = self.myfriend[i]['Nickname']
+                break
+        self.mymessage[num].append(history)
+        self.message_Signal.emit(num)
+
+    def receive_message(self, num):
+        pos = len(self.mymessage[num]) - 1
+        history = self.mymessage[num][pos]
+        if pos > 1:
+            history1 = self.mymessage[num][pos - 1]
+        else:
+            history1 = None
+        print(history)
+
+        dialogContainer = QtWidgets.QWidget()
+        dialog = QtWidgets.QVBoxLayout(dialogContainer)
+        dialog.setSpacing(0)
+        message = QtWidgets.QHBoxLayout()
+        message.setSpacing(0)
+        icon = QtWidgets.QLabel()
+        jpg = QtGui.QPixmap('Pic/Selfie-init.png')
+        icon.resize(50, 50)
+        icon.setPixmap(jpg.scaled(icon.size(), aspectRatioMode= QtCore.Qt.KeepAspectRatio))
+        icon.setObjectName("Picture")
+
+        words = QtWidgets.QLabel()
+        words.setMaximumWidth(600)
+        words.setText(feed(history['Text']))
+        words.setWordWrap(True)
+        words.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        words.setObjectName("Text")
+        
+        if calculate(history1, history):
+            Showtime = QtWidgets.QLabel()
+            Showtime.setStyleSheet("color:#b2b2b2")
+            Showtime.setFixedWidth(400)
+            Showtime.setAlignment(QtCore.Qt.AlignCenter)
+            Showtime.setText(history['Date'])
+            Showtime.setFont(QtGui.QFont(QtGui.QFont("Arial", 18)))
+            Showtime.setAlignment(QtCore.Qt.AlignCenter)
+            dialog.addWidget(Showtime)
+        if history['Sender'] == self.selfInformation['ID']:
+            words.setAlignment(QtCore.Qt.AlignCenter)
+            spacer = QtWidgets.QSpacerItem(800, 10, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+            message.addSpacerItem(spacer)
+            message.addWidget(words)
+            message.setStretchFactor(words, 10)
+            tmp = QtWidgets.QLabel()
+            tmp.setFixedWidth(10)
+            message.addWidget(tmp)
+            message.setStretchFactor(tmp, 1)
+            icon.setAlignment(QtCore.Qt.AlignRight)
+            message.addWidget(icon)
+            message.setStretchFactor(icon, 3)
+            words.setStyleSheet("border-top-left-radius: 3px;border-top-right-radius: 3px;\n"
+        "border-bottom-right-radius: 3px; border-bottom-left-radius: 3px; background-color: #b2e281;")
+            for i in range(len(self.myfriend)):
+                if self.myfriend[i]['ID'] == history['Receiver']:
+                    box = toshow[i]
+                    break
+        else:
+            icon.setAlignment(QtCore.Qt.AlignLeft)
+            message.addWidget(icon)
+            message.setStretchFactor(icon, 3)
+            tmp = QtWidgets.QLabel()
+            tmp.setFixedWidth(10)
+            message.addWidget(tmp)
+            message.setStretchFactor(tmp, 1)
+            words.setAlignment(QtCore.Qt.AlignCenter)
+            message.addWidget(words)
+            message.setStretchFactor(words, 10)
+            spacer = QtWidgets.QSpacerItem(800, 10, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+            message.addSpacerItem(spacer)
+            words.setStyleSheet("border-top-left-radius: 3px;border-top-right-radius: 3px;\n"
+        "border-bottom-right-radius: 3px; border-bottom-left-radius: 3px; background-color: #fff;")
+            for i in range(len(self.myfriend)):
+                if self.myfriend[i]['ID'] == history['Sender']:
+                    box = toshow[i]
+                    break
+        dialog.addLayout(message)
+        box1 = box.findChild(QtWidgets.QVBoxLayout, "History")
+        box1.insertWidget(box1.count() - 1, dialogContainer)
 
     def clearLayout(self, num):
         if num == 0:
@@ -591,7 +666,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
         for i in range(len(friendList)):
             Box = QtWidgets.QWidget()
             Username = QtWidgets.QLabel()
-            Username.setFixedHeight(80)
+            Username.setFixedHeight(70)
             Username.setText(friendList[i]['Nickname'] + '(' + friendList[i]['Username'] + ')')
             Username.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
             Username.installEventFilter(self)
@@ -606,9 +681,11 @@ class Ui_Dialog3(QtWidgets.QWidget):
         self.image.setStyleSheet("background-color:rgb(255, 255, 255);")
         panel = QtWidgets.QVBoxLayout(self.image)
         self.myfriend.append(parameters)
+        self.mymessage.append([])
         global talker_lock
         talker_lock.acquire()
         self.talker2 = len(self.myfriend) - 1
+        self.talker = len(self.myfriend) - 1
         
         panel.setContentsMargins(20, 0, 20, 0)
         panel.setSpacing(0)
@@ -656,7 +733,11 @@ class Ui_Dialog3(QtWidgets.QWidget):
 
     def talktofriend1(self, num):
         self.topbar.setText(self.myfriend[num]['Nickname'])
-        self.belowContainer.setVisible(True)
+        global lastshow
+        if lastshow != -1:
+            toshow[lastshow].setVisible(False)
+        toshow[num].setVisible(True)
+        lastshow = num
 
     def talktofriend2(self, active=True):
         self.friend_Signal.emit(self.talker2, True)
@@ -669,7 +750,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
         global friendList
         if len(friendList) != 0:
             friendList.clear()
-        friendList = serial_data_unpack(self.sock)        
+        friendList = serial_data_unpack(self.sock)
         self.show_listSignal.emit(0)
 
     def friend_not_found(self, parameters):
@@ -696,6 +777,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
 
     def showFriend(self, num, issue):
         User = QtWidgets.QWidget()
+        User.setFixedWidth(300)
         User.setFixedHeight(70)
         Box = QtWidgets.QHBoxLayout(User)
         Box.setContentsMargins(10, 10, 0, 10)
@@ -719,6 +801,60 @@ class Ui_Dialog3(QtWidgets.QWidget):
         Box.setStretchFactor(Name, 22)
         User.installEventFilter(self)
         totalk.append(User)
+
+        belowContainer = QtWidgets.QWidget()
+        below = QtWidgets.QVBoxLayout(belowContainer)
+
+        historyContainer = QtWidgets.QWidget()
+        historyContainer.setFixedWidth(940)
+        history = QtWidgets.QVBoxLayout(historyContainer)
+        historyContainer.setStyleSheet("background-color: #eee;")
+        history.setSpacing(0)
+        history.setContentsMargins(0, 0, 0, 0)
+        history.setObjectName("History")
+        scroll = QtWidgets.QScrollArea()
+        scroll.setStyleSheet("border:none;")
+        scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        scroll.setWidgetResizable(True)
+        scroll.setFixedHeight(620)
+        scroll.setWidget(historyContainer)
+        scroll.setObjectName("History")
+        scroll.setFixedWidth(960)
+
+        spacer = QtWidgets.QSpacerItem(1000, 980, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        history.addSpacerItem(spacer)
+
+        below.addWidget(scroll)
+        below.setStretchFactor(scroll, 8)
+
+        msg = QtWidgets.QTextEdit()
+        msg.setStyleSheet("margin-right: 19px; border-top: 1px solid #d6d6d6; background-color: #eee;")
+        msg.setFixedHeight(200)
+        msg.setFont(QtGui.QFont(QtGui.QFont("Arial", 16)))
+        below.addWidget(msg)
+        below.setStretchFactor(msg, 2)
+        msg.setObjectName("MSG")
+
+        line = QtWidgets.QHBoxLayout()
+        line.addStretch(13)
+        sendButton = QtWidgets.QPushButton()
+        sendButton.setFixedWidth(160)
+        sendButton.setText("Send")
+        sendButton.setFont(QtGui.QFont(QtGui.QFont("Arial", 20)))
+        sendButton.clicked.connect(self.send)
+        sendButton.setObjectName("SendButton")
+        line.addWidget(sendButton)
+        line.setStretchFactor(sendButton, 3)
+
+        below.addLayout(line)
+        below.setStretchFactor(line, 1)
+
+        self.sideDialog.addWidget(belowContainer)
+        self.sideDialog.setStretchFactor(belowContainer, 11)
+        belowContainer.setVisible(False)
+        toshow.append(belowContainer)
+
         if len(self.list_for_friend) <= 1:
             self.list_for_friend.insertWidget(self.list_for_friend.count() - 1, User)
         else:
@@ -731,19 +867,24 @@ class Ui_Dialog3(QtWidgets.QWidget):
                     break
             self.list_for_friend.insertWidget(pos, User)
         if issue:
+            global lasttalk
+            if lasttalk != -1:
+                totalk[lasttalk].setStyleSheet("background-color:#292c33;")
             self.talk_Signal.emit(len(self.myfriend) - 1)
             User.setStyleSheet("background-color:#3a3f45")
-
+            lasttalk = len(self.myfriend) - 1
 
     def Info(self, data, friend=False):
         self.name.setText(data['Nickname'])
         self.selfInformation['ID'] = data['ID']
         self.selfInformation['Username'] = data['Username']
         self.selfInformation['Nickname'] = data['Nickname']
+        self.mymessage = data['Message']
         if friend:
             self.myfriend = data['Friend']
         for i in range(len(self.myfriend)):
             self.friend_Signal.emit(i, False)
+
 
 class Dialog3(Ui_Dialog3):
     def __init__(self, sock, parent=None):

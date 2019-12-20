@@ -76,17 +76,30 @@ def get_room_members(room_id):
     return list(map(lambda x: [x[0], x[1], x[0] in user_id_to_host, x[2]], result))
 
 # TODO why only user_id?
-def add_to_chat_history(user_id, target_id, target_type, data, sent):
+def add_to_chat_history(user_id, target_id, target_type, data, date, sent):
     c = get_cursor()
-    c.execute('INSERT INTO Chat_History (User_ID,Target_ID,Target_Type,Data,Sent) VALUES (?,?,?,?,?)',
-              [user_id, target_id, target_type, data, sent])
+    c.execute('INSERT INTO Chat_History (User_ID,Target_ID,Target_Type,Data,Date,Sent) VALUES (?,?,?,?,?,?)',
+              [user_id, target_id, target_type, data, date, sent])
     return c.lastrowid
+
+def map_data_date(x):
+    y = {}
+    y['Text'] = x[0]
+    y['Date'] = x[1]
+    return y
 
 # [[data:bytes,sent:int]]
 # TODO sent means read?
-def get_chat_history(user_id):
+def get_chat_history(user_id, target_id):
     c = get_cursor()
-    result = c.execute('SELECT Data,Sent FROM Chat_History WHERE User_ID=?', [user_id]).fetchall()
-    ret = list(map(lambda x: [x[0], x[1]], result))
-    c.execute('UPDATE Chat_History SET Sent=1 WHERE User_ID=?', [user_id])
+    result = c.execute('SELECT Data,Date FROM Chat_History WHERE User_ID=? and Target_ID=?', [user_id, target_id]).fetchall()
+    result1 = c.execute('SELECT Data,Date FROM Chat_History WHERE Target_ID=? and User_ID=?', [user_id, target_id]).fetchall()
+    ret = list(map(map_data_date, result))
+    ret1 = list(map(map_data_date, result1))
+    print(ret, ret1)
+    c.execute('UPDATE Chat_History SET Sent=1 WHERE Target_ID=?', [user_id])
+    for x in ret1:
+        ret.append(x)
+    sorted(ret, key=lambda x:x['Date'])
+    print("ret:", ret)
     return ret

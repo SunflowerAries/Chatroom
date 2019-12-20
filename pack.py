@@ -70,7 +70,7 @@ def serial_header_pack(type, parameters=None):
     body += struct.pack('!B', num)
     for i in range(num):
         body += pack_by_type(parameters[i])
-    print(body)
+    # print(body)
     return body
 
 def serial_data_pack(parameters=None):
@@ -140,5 +140,4 @@ def serial_data_unpack(host):
     for i in range(cnt):
         tmp = unpack_by_type(host)
         data.append(tmp)
-    print(data)
     return data
