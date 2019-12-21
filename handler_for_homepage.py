@@ -1,4 +1,6 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
+import re, time
+from datetime import timedelta, datetime
 
 def setupIcon(Icon, url, size):
     jpg = QtGui.QPixmap(url)
@@ -21,14 +23,40 @@ def Ray(object, num): # 0: blue 1: red
 def calculate(time1, time2):
     if time1 == None:
         return True
-    print(time1['Date'], time2['Date'])
-    return False
+    tim1 = datetime.strptime(time1['Date'], "%a %b %d %H:%M:%S %Y")
+    tim2 = datetime.strptime(time2['Date'], "%a %b %d %H:%M:%S %Y")
+    print(tim1, tim1)
+    print(timedelta(minutes=5), timedelta(minutes=5))
+    return tim2 > tim1 + timedelta(minutes=5)
+    # print(time1['Date'], time2['Date'])
+    return True
 
 def feed(String):
-    k = 0
-    for i in range(len(String)):
-        if i % 24 == 0 and i != 0:
-            String = String[:i+k] + '\n' + String[i+k:]
+    index = [i.start() for i in re.finditer(' ', String)]
+    # print(index)
+    k = 1
+    i = j = 0
+    num = 0
+    lenth = len(String)
+    while i < lenth:
+        if num % 50 == 0 and num != 0:
+            for m in range(j, len(index)):
+                if index[m] > i:
+                    if index[m] - i < 5:
+                        j = m + 1
+                        String = String[:index[m]+k] + '\n' + String[index[m]+k:]
+                        i = index[m]
+                        # print(String, i, k, "First")
+                    else:
+                        i = index[m - 1]
+                        j = m
+                        String = String[:i+k] + '\n' + String[i+k:]
+                        # print(String, i, k, "Second")
+                    break
+            num = 0
             k += 1
-    print(String)
+            continue
+        i += 1
+        num += 1
+    # print(String)
     return String

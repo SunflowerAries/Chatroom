@@ -1,4 +1,6 @@
 import sqlite3
+import time
+from functools import cmp_to_key
 conn = sqlite3.connect('database.db', isolation_level=None, check_same_thread=False)
 
 user_id_to_host = {}
@@ -84,22 +86,23 @@ def add_to_chat_history(user_id, target_id, target_type, data, date, sent):
 
 def map_data_date(x):
     y = {}
-    y['Text'] = x[0]
-    y['Date'] = x[1]
+    y['Sender'] = x[0]
+    y['Receiver'] = x[1]
+    y['Text'] = x[2]
+    y['Date'] = x[3]
     return y
 
 # [[data:bytes,sent:int]]
 # TODO sent means read?
 def get_chat_history(user_id, target_id):
     c = get_cursor()
-    result = c.execute('SELECT Data,Date FROM Chat_History WHERE User_ID=? and Target_ID=?', [user_id, target_id]).fetchall()
-    result1 = c.execute('SELECT Data,Date FROM Chat_History WHERE Target_ID=? and User_ID=?', [user_id, target_id]).fetchall()
+    result = c.execute('SELECT User_ID,Target_ID,Data,Date FROM Chat_History WHERE User_ID=? and Target_ID=?', [user_id, target_id]).fetchall()
+    result1 = c.execute('SELECT User_ID,Target_ID,Data,Date FROM Chat_History WHERE Target_ID=? and User_ID=?', [user_id, target_id]).fetchall()
     ret = list(map(map_data_date, result))
     ret1 = list(map(map_data_date, result1))
-    print(ret, ret1)
     c.execute('UPDATE Chat_History SET Sent=1 WHERE Target_ID=?', [user_id])
     for x in ret1:
         ret.append(x)
-    sorted(ret, key=lambda x:x['Date'])
-    print("ret:", ret)
+    # other = [time.strptime(x["Date"], "%a %b %d %H:%M:%S %Y") for x in ret]
+    ret.sort(key=lambda x: time.strptime(x["Date"], "%a %b %d %H:%M:%S %Y"))
     return ret
