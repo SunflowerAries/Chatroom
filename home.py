@@ -595,7 +595,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
             history1 = self.mymessage[num][pos - 1]
         else:
             history1 = None
-        print(history)
+        # print(history)
 
         dialogContainer = QtWidgets.QWidget()
         dialogContainer.setFixedWidth(960)
@@ -769,7 +769,7 @@ class Ui_Dialog3(QtWidgets.QWidget):
         self.image.close()
 
     def friend_found(self, parameters):
-        print('friend_found')
+        # print('friend_found')
         global friendList
         if len(friendList) != 0:
             friendList.clear()
@@ -777,23 +777,23 @@ class Ui_Dialog3(QtWidgets.QWidget):
         self.show_listSignal.emit(0)
 
     def friend_not_found(self, parameters):
-        print('friend_not_found')
+        # print('friend_not_found')
         self.prompt(self.SearchfriendInput, 1)
 
     def switchtoChat(self, event):
-        print("In chat")
+        # print("In chat")
         setupIcon(self.chatIcon, 'Pic/Chat-G.png', [50, 50])
         setupIcon(self.friendIcon, 'Pic/Friend.png', [50, 50])
         setupIcon(self.discoveryIcon, 'Pic/Discovery.png', [50, 50])
     
     def switchtoFriend(self, event):
-        print("In Friend")
+        # print("In Friend")
         setupIcon(self.chatIcon, 'Pic/Chat.png', [50, 50])
         setupIcon(self.friendIcon, 'Pic/Friend-G.png', [50, 50])
         setupIcon(self.discoveryIcon, 'Pic/Discovery.png', [50, 50])
 
     def switchtoDiscovery(self, event):
-        print("In Discovery")
+        # print("In Discovery")
         setupIcon(self.chatIcon, 'Pic/Chat.png', [50, 50])
         setupIcon(self.friendIcon, 'Pic/Friend.png', [50, 50])
         setupIcon(self.discoveryIcon, 'Pic/Discovery-G.png', [50, 50])

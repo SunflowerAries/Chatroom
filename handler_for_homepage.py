@@ -25,8 +25,8 @@ def calculate(time1, time2):
         return True
     tim1 = datetime.strptime(time1['Date'], "%a %b %d %H:%M:%S %Y")
     tim2 = datetime.strptime(time2['Date'], "%a %b %d %H:%M:%S %Y")
-    print(tim1, tim1)
-    print(timedelta(minutes=5), timedelta(minutes=5))
+    # print(tim1, tim1)
+    # print(timedelta(minutes=5), timedelta(minutes=5))
     return tim2 > tim1 + timedelta(minutes=5)
     # print(time1['Date'], time2['Date'])
     return True
