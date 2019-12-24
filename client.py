@@ -14,19 +14,6 @@ class ChatClient(threading.Thread):
     def run(self):
         listener(self)
 
-def startup(sock):
-    choice = input('login(0), register(1):')
-    username = input('username:')
-    password = input('password:')
-    if int(choice) == 0:
-        header = serial_header_pack(MessageType.login, [username, password])
-    else:
-        nickname = input('nickname:')
-        header = serial_header_pack(MessageType.register, [username, password, nickname])
-    
-    # print(header)
-    sock.conn.send(header)
-
 def main(dst, port):
     client_socket = socket.socket()
     client_socket.connect((dst, port))

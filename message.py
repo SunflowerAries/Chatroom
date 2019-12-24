@@ -22,12 +22,13 @@ class MessageType(enum.IntEnum):
     friend_request_rejected = 108
     resolve_friend_request = 109
     receive_message = 110
+    other_host_login = 111
 
     friend_online = 200
     friend_offline = 201
     room_mem_online = 202
     room_mem_offline = 203
-    other_host_login = 204
+    
     add_friend_successful_server = 205
 
 have_datagram = [MessageType.send_message, MessageType.login_successful]

@@ -38,8 +38,7 @@ def login(sock, parameters):
         old_host = database.user_id_to_host[user['ID']]
         header = serial_header_pack(MessageType.other_host_login)
         old_host.conn.send(header)
-        old_host.close()
-        database.kickout_host(old_host)
+        # old_host.conn.close()
     
     database.user_id_to_host[user['ID']] = sock
     # ID Username Nickname
@@ -82,10 +81,6 @@ def login(sock, parameters):
         # if friend:
         iheader = serial_header_pack(MessageType.resolve_friend_request, [friend])
         sock.conn.send(iheader)
-        
-def other_host_login(sock, parameters):
-    print('other_host_login')
-    print(parameters)
 
 def friend_online(sock, parameters):
     print('friend_online')
@@ -194,7 +189,6 @@ event_hander_map = {
     MessageType.create_room: create_room,
     MessageType.query_room_users: query_room_users,
     MessageType.query_friend: query_friend,
-    MessageType.other_host_login: other_host_login,
     MessageType.friend_online: friend_online,
     MessageType.room_mem_online: room_mem_online,
     MessageType.add_friend_successful_server: add_friend_successful_server,

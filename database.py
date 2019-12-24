@@ -22,9 +22,6 @@ def get_user(user_id):
         user['online'] = user_id in user_id_to_host
         return user
 
-def kickout_host(host):
-    print("jo")
-
 def get_pending_friend_request(user_id):
     c = get_cursor()
     rows = c.execute('SELECT Request_User_ID FROM Friends WHERE Receive_User_ID=? AND NOT Resolved', [user_id]).fetchall()
